@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b1020">
-    <meta name="description" content="Discover the latest movies with FilmyFeed - Professional movie discovery platform">
-    <title>FilmyFeed - Professional Movie Discovery</title>
+    <meta name="description" content="Discover the latest movies, watch trailers, and explore detailed information with FilmyFeed - Professional movie discovery platform">
+    <title>FilmyFeed - Professional Movie Discovery with Trailers</title>
 
-    <!-- Fonts -->
+    <!-- Fonts & Styles -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 
@@ -42,7 +42,7 @@
                             type="search" 
                             id="search-input" 
                             class="search-input"
-                            placeholder="Search movies..." 
+                            placeholder="Search movies, actors..." 
                             autocomplete="off"
                         >
                         <button type="button" id="search-btn" class="search-btn">
@@ -63,7 +63,7 @@
             <!-- Page Header -->
             <div class="page-header">
                 <h1 id="page-title" class="page-title">Latest Released Movies</h1>
-                <p class="page-subtitle">Discover the newest releases in theaters worldwide</p>
+                <p class="page-subtitle">Discover the newest releases in theaters worldwide with trailers</p>
             </div>
 
             <!-- Status Messages -->
@@ -103,6 +103,30 @@
             </div>
         </div>
     </footer>
+
+    <!-- YouTube Trailer Modal -->
+    <div id="trailer-modal" class="trailer-modal hidden">
+        <div class="trailer-dialog">
+            <div class="trailer-header">
+                <h3 id="trailer-title" class="trailer-title">Movie Trailer</h3>
+                <button id="trailer-close" class="trailer-close" aria-label="Close trailer">
+                    <span>✕</span>
+                </button>
+            </div>
+            <div class="trailer-frame-wrap">
+                <iframe 
+                    id="trailer-iframe" 
+                    width="560" 
+                    height="315" 
+                    src="" 
+                    title="YouTube movie trailer" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
