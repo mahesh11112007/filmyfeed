@@ -1,6 +1,6 @@
 /**
  * FilmyFeed Professional - Home Page Controller
- * Handles movie discovery, search, and navigation
+ * Features: Latest movies, search, collapsible search UI
  */
 
 class FilmyFeedApp {
@@ -9,16 +9,17 @@ class FilmyFeedApp {
         this.IMG_BASE = 'https://image.tmdb.org/t/p/w500';
         this.currentQuery = '';
         this.isLoading = false;
-        this.cache = new Map();
+        this.searchActive = false;
 
         // DOM elements
         this.elements = {
             moviesGrid: document.getElementById('movies-grid'),
+            searchToggle: document.getElementById('search-toggle'),
+            searchWrapper: document.getElementById('search-wrapper'),
             searchInput: document.getElementById('search-input'),
             searchBtn: document.getElementById('search-btn'),
-            searchForm: document.querySelector('.search-form'),
+            searchClose: document.getElementById('search-close'),
             pageTitle: document.getElementById('page-title'),
-            pageSubtitle: document.querySelector('.page-subtitle'),
             loadingEl: document.getElementById('loading'),
             errorEl: document.getElementById('error'),
             noResultsEl: document.getElementById('no-results')
@@ -30,26 +31,26 @@ class FilmyFeedApp {
     init() {
         this.setupEventListeners();
         this.handleInitialLoad();
-        this.preloadCriticalResources();
     }
 
     setupEventListeners() {
-        // Search form submission
-        this.elements.searchForm?.addEventListener('submit', (e) => {
-            e.preventDefault();
+        // Search toggle
+        this.elements.searchToggle?.addEventListener('click', () => {
+            this.toggleSearch();
+        });
+
+        // Search close
+        this.elements.searchClose?.addEventListener('click', () => {
+            this.closeSearch();
+        });
+
+        // Search functionality
+        this.elements.searchBtn?.addEventListener('click', () => {
             this.handleSearch();
         });
 
-        // Search button click
-        this.elements.searchBtn?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.handleSearch();
-        });
-
-        // Search input enter key
         this.elements.searchInput?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault();
                 this.handleSearch();
             }
         });
@@ -71,6 +72,45 @@ class FilmyFeedApp {
         this.elements.errorEl?.addEventListener('click', () => {
             this.retry();
         });
+
+        // Close search on outside click
+        document.addEventListener('click', (e) => {
+            if (this.searchActive && 
+                !e.target.closest('.search-container') && 
+                !e.target.closest('.search-toggle')) {
+                this.closeSearch();
+            }
+        });
+
+        // Close search on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.searchActive) {
+                this.closeSearch();
+            }
+        });
+    }
+
+    toggleSearch() {
+        if (this.searchActive) {
+            this.closeSearch();
+        } else {
+            this.openSearch();
+        }
+    }
+
+    openSearch() {
+        this.searchActive = true;
+        this.elements.searchWrapper?.classList.add('active');
+        // Focus on input after animation
+        setTimeout(() => {
+            this.elements.searchInput?.focus();
+        }, 200);
+    }
+
+    closeSearch() {
+        this.searchActive = false;
+        this.elements.searchWrapper?.classList.remove('active');
+        this.elements.searchInput.value = '';
     }
 
     handleInitialLoad() {
@@ -79,14 +119,17 @@ class FilmyFeedApp {
 
         if (query) {
             this.currentQuery = query;
-            this.elements.searchInput.value = query;
+            if (this.elements.searchInput) {
+                this.elements.searchInput.value = query;
+                this.openSearch();
+            }
             this.loadSearchResults(query);
         } else {
             this.loadLatestMovies();
         }
     }
 
-    async handleSearch() {
+    handleSearch() {
         const query = this.elements.searchInput.value.trim();
 
         if (!query) {
@@ -95,21 +138,22 @@ class FilmyFeedApp {
         }
 
         if (query === this.currentQuery) {
-            return; // Avoid duplicate searches
+            return;
         }
 
-        // Update URL without page reload
+        // Update URL
         const newUrl = `${window.location.pathname}?q=${encodeURIComponent(query)}`;
         window.history.pushState({ query }, '', newUrl);
 
         this.currentQuery = query;
-        await this.loadSearchResults(query);
+        this.loadSearchResults(query);
+        this.closeSearch();
     }
 
     navigateToHome() {
         window.history.pushState({}, '', window.location.pathname);
         this.currentQuery = '';
-        this.elements.searchInput.value = '';
+        this.closeSearch();
         this.loadLatestMovies();
     }
 
@@ -119,11 +163,15 @@ class FilmyFeedApp {
 
         if (query) {
             this.currentQuery = query;
-            this.elements.searchInput.value = query;
+            if (this.elements.searchInput) {
+                this.elements.searchInput.value = query;
+            }
             this.loadSearchResults(query);
         } else {
             this.currentQuery = '';
-            this.elements.searchInput.value = '';
+            if (this.elements.searchInput) {
+                this.elements.searchInput.value = '';
+            }
             this.loadLatestMovies();
         }
     }
@@ -131,7 +179,7 @@ class FilmyFeedApp {
     handleMovieClick(card) {
         const movieId = card.dataset.id;
         if (movieId) {
-            // Add loading state to clicked card
+            // Add loading state
             card.style.opacity = '0.7';
             card.style.pointerEvents = 'none';
 
@@ -146,10 +194,7 @@ class FilmyFeedApp {
     }
 
     async loadSearchResults(query) {
-        this.updatePageHeader(
-            `Search Results for "${query}"`,
-            `Found movies matching your search for "${query}"`
-        );
+        this.updatePageHeader(`Search Results for "${query}"`, `Found movies matching your search`);
         await this.fetchAndRenderMovies('search', { query });
     }
 
@@ -168,24 +213,16 @@ class FilmyFeedApp {
             }
 
             this.renderMovies(movies);
-            this.hideLoading();
 
         } catch (error) {
             console.error('Error fetching movies:', error);
             this.showError('Failed to load movies. Click to retry.');
+        } finally {
+            this.hideLoading();
         }
     }
 
     async fetchLatestMovies() {
-        const cacheKey = 'latest_movies';
-
-        if (this.cache.has(cacheKey)) {
-            const cached = this.cache.get(cacheKey);
-            if (Date.now() - cached.timestamp < 300000) { // 5 minutes cache
-                return cached.data;
-            }
-        }
-
         const [page1, page2] = await Promise.all([
             this.fetchFromAPI('movie/now_playing', { 
                 page: 1, 
@@ -199,18 +236,7 @@ class FilmyFeedApp {
             })
         ]);
 
-        const movies = [
-            ...(page1?.results || []),
-            ...(page2?.results || [])
-        ];
-
-        // Cache the results
-        this.cache.set(cacheKey, {
-            data: movies,
-            timestamp: Date.now()
-        });
-
-        return movies;
+        return [...(page1?.results || []), ...(page2?.results || [])];
     }
 
     async fetchSearchMovies(query) {
@@ -233,12 +259,7 @@ class FilmyFeedApp {
             }
         });
 
-        const response = await fetch(url.toString(), {
-            headers: {
-                'Accept': 'application/json',
-            },
-            cache: 'default'
-        });
+        const response = await fetch(url.toString());
 
         if (!response.ok) {
             throw new Error(`API request failed: ${response.status}`);
@@ -277,13 +298,11 @@ class FilmyFeedApp {
             : 'N/A';
 
         return `
-            <article class="movie-card" data-id="${movie.id}" tabindex="0" role="button" aria-label="View details for ${title}">
-                <div class="poster-container">
-                    ${posterUrl 
-                        ? `<img class="movie-poster" src="${posterUrl}" alt="${title} poster" loading="lazy">` 
-                        : `<div class="movie-poster" aria-label="No poster available"></div>`
-                    }
-                </div>
+            <article class="movie-card" data-id="${movie.id}" role="button" tabindex="0">
+                ${posterUrl 
+                    ? `<img class="movie-poster" src="${posterUrl}" alt="${title} poster" loading="lazy">` 
+                    : `<div class="movie-poster" aria-label="No poster available"></div>`
+                }
                 <div class="movie-info">
                     <h3 class="movie-title" title="${title}">${title}</h3>
                     <div class="movie-meta">
@@ -318,8 +337,9 @@ class FilmyFeedApp {
             this.elements.pageTitle.textContent = title;
         }
 
-        if (this.elements.pageSubtitle) {
-            this.elements.pageSubtitle.textContent = subtitle;
+        const subtitleEl = document.querySelector('.page-subtitle');
+        if (subtitleEl) {
+            subtitleEl.textContent = subtitle;
         }
     }
 
@@ -336,10 +356,12 @@ class FilmyFeedApp {
     }
 
     showError(message) {
-        this.isLoading = false;
         this.hideAllStatus();
         if (this.elements.errorEl) {
-            this.elements.errorEl.querySelector('.status-text').textContent = message;
+            const textEl = this.elements.errorEl.querySelector('.status-text');
+            if (textEl) {
+                textEl.textContent = message;
+            }
             this.elements.errorEl.classList.remove('hidden');
         }
         this.elements.moviesGrid.innerHTML = '';
@@ -365,14 +387,6 @@ class FilmyFeedApp {
         }
     }
 
-    preloadCriticalResources() {
-        // Preload common movie poster sizes
-        const link = document.createElement('link');
-        link.rel = 'dns-prefetch';
-        link.href = 'https://image.tmdb.org';
-        document.head.appendChild(link);
-    }
-
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -384,10 +398,3 @@ class FilmyFeedApp {
 document.addEventListener('DOMContentLoaded', () => {
     window.filmyFeedApp = new FilmyFeedApp();
 });
-
-// Handle service worker registration
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        // navigator.serviceWorker.register('/sw.js').catch(() => {});
-    });
-}
