@@ -28,7 +28,7 @@ app.get('/api/*', async (req, res) => {
         });
     }
 
-    const endpoint = req.params[0]; // wildcard after /api/
+    const endpoint = req.params[0];
     const url = `${TMDB_BASE_URL}/${endpoint}`;
 
     try {
@@ -37,8 +37,11 @@ app.get('/api/*', async (req, res) => {
                 ...req.query,
                 api_key: TMDB_API_KEY,
             },
-            timeout: 10000,
+            timeout: 15000,
         });
+
+        // Add cache headers
+        res.setHeader('Cache-Control', 'public, max-age=300');
         res.json(response.data);
     } catch (error) {
         const code = error.response?.status || 500;
@@ -60,6 +63,7 @@ if (require.main === module) {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         console.log(`ðŸš€ FilmyFeed server running on port ${PORT}`);
+        console.log(`ðŸŽ¬ Open http://localhost:${PORT} to view the app`);
     });
 }
 
