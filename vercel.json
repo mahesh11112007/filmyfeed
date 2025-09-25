@@ -1,29 +1,57 @@
 {
-  "version": 2,
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "@vercel/node"
-    }
-  },
-  "rewrites": [
-    { "source": "/health", "destination": "/api/server.js" },
-    { "source": "/api/(.*)", "destination": "/api/server.js" },
-    { "source": "/movie.html", "destination": "/movie.html" },
-    {
-      "source": "/(.*\\.(js|css|svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot))",
-      "destination": "/$1"
-    },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=300" }
-      ]
-    }
-  ],
-  "env": {
-    "TMDB_API_KEY": "@tmdb_api_key"
-  }
+"version": 2,
+"name": "filmyfeed",
+"description": "your cinema soulmate",
+"builds": [
+{
+"src": "server.js",
+"use": "@vercel/node"
+},
+{
+"src": "public/**/",
+"use": "@vercel/static"
 }
+],
+"routes": [
+{
+"src": "/health",
+"dest": "/server.js"
+},
+{
+"src": "/api/(.)",
+"dest": "/server.js"
+},
+{
+"src": "/movie.html",
+"dest": "/public/movie.html"
+},
+{
+"src": "/(.\.(js|css|svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot))",
+"dest": "/public/$1",
+"headers": {
+"Cache-Control": "public, max-age=31536000, immutable"
+}
+},
+{
+"src": "/(.)",
+"dest": "/public/index.html"
+}
+],
+"headers": [
+{
+"source": "/api/(.*)",
+"headers": [
+{
+"key": "Cache-Control",
+"value": "public, max-age=300"
+}
+]
+}
+],
+"env": {
+"TMDB_API_KEY": "@tmdb_api_key"
+}
+}
+
+What is wrong
+
