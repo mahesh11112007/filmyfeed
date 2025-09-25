@@ -1,0 +1,49 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="Watch Movie - FilmyFeed">
+    <title>Watch Movie - FilmyFeed</title>
+
+    <!-- HLS.js for video streaming -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.10/dist/hls.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Netflix+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="player.css">
+
+    <!-- Mobile app optimizations -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="format-detection" content="telephone=no">
+
+    <link rel="icon" type="image/png" href="logo.png">
+</head>
+<body class="watch-page">
+    <!-- Video Player Container -->
+    <div id="video-player-container" class="video-player-container">
+        <!-- Player will be injected here by JavaScript -->
+    </div>
+
+    <!-- Fallback for unsupported browsers -->
+    <div id="unsupported-browser" class="unsupported-browser hidden">
+        <div class="unsupported-content">
+            <h2>Browser Not Supported</h2>
+            <p>Please use a modern browser like Chrome, Safari, or Firefox to watch videos.</p>
+            <button onclick="window.history.back()" class="btn-primary">Go Back</button>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="page-loading" class="page-loading">
+        <div class="loading-spinner"></div>
+        <span>Initializing player...</span>
+    </div>
+
+    <script src="player.js"></script>
+    <script src="watch.js"></script>
+</body>
+</html>
