@@ -4,189 +4,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0b1020">
-    <meta name="description" content="Movie details with trailer - FilmyFeed Mobile">
-    <title>Movie Details - FilmyFeed Mobile</title>
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="Movie Details - FilmyFeed">
+    <title>Movie Details - FilmyFeed</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Netflix+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 
-    <!-- Mobile optimizations -->
+    <!-- Mobile app optimizations -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="format-detection" content="telephone=no">
 
     <link rel="icon" type="image/png" href="logo.png">
 </head>
-<body>
-    <!-- Mobile Header -->
-    <header class="app-header">
-        <div class="container">
-            <div class="header-content">
-                <!-- Brand with disco lights -->
-                <a href="/" class="brand">
-                    <div class="logo-container">
-                        <img src="logo.png" alt="FilmyFeed" class="brand-logo">
-                        <div class="disco-border"></div>
-                    </div>
-                    <div class="brand-text">
-                        <span class="brand-name">FilmyFeed</span>
-                        <span class="brand-tagline">Mobile</span>
-                    </div>
-                </a>
-
-                <!-- Mobile Navigation -->
-                <div class="mobile-nav">
-                    <button class="search-toggle" id="search-toggle">
-                        <span class="search-icon">🔍</span>
-                    </button>
-                    <a href="/" class="back-btn">← Back</a>
+<body class="movie-page">
+    <!-- Mobile App Header -->
+    <header class="app-header movie-header">
+        <div class="header-container">
+            <div class="header-left">
+                <button class="back-btn" id="back-btn" aria-label="Back">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+                <div class="brand-logo">
+                    <img src="logo.png" alt="FilmyFeed" class="logo-img">
+                    <span class="brand-text">FILMYFEED</span>
                 </div>
             </div>
-
-            <!-- Mobile Search -->
-            <div class="search-wrapper" id="search-wrapper">
-                <input 
-                    type="search" 
-                    id="search-input" 
-                    class="search-input"
-                    placeholder="Search movies..." 
-                    autocomplete="off"
-                >
-                <button type="button" id="search-btn" class="search-btn">Go</button>
-                <button type="button" class="search-close" id="search-close">✕</button>
+            <div class="header-right">
+                <button class="search-btn" id="search-btn" aria-label="Search">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M21.53 20.47L17.689 16.629A8.5 8.5 0 1 0 16.629 17.689L20.47 21.53a.75.75 0 1 0 1.06-1.06zM3.5 10.5a7 7 0 1 1 14 0 7 7 0 0 1-14 0z"/>
+                    </svg>
+                </button>
+                <button class="share-btn" id="share-btn" aria-label="Share">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
+                    </svg>
+                </button>
             </div>
         </div>
     </header>
 
-    <main class="main-content">
-        <div class="container">
-            <!-- Loading State -->
-            <div id="movie-loading" class="status-card loading-card">
-                <div class="loading-spinner"></div>
-                <p class="status-text">Loading movie details...</p>
+    <!-- Loading State -->
+    <div id="movie-loading" class="movie-loading">
+        <div class="loading-spinner"></div>
+        <span>Loading movie details...</span>
+    </div>
+
+    <!-- Error State -->
+    <div id="movie-error" class="status-message error hidden">
+        <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+        <span>Failed to load movie details. Tap to retry.</span>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content movie-details" id="movie-content">
+        <!-- Hero Section with Backdrop -->
+        <section class="movie-hero">
+            <div class="hero-backdrop" id="movie-backdrop"></div>
+            <div class="hero-gradient"></div>
+
+            <!-- Floating Play Button -->
+            <div class="play-button-overlay">
+                <button class="hero-play-btn" id="hero-play-btn" aria-label="Play movie">
+                    <svg width="32" height="32" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                </button>
             </div>
 
-            <!-- Error State -->
-            <div id="movie-error" class="status-card error-card hidden">
-                <div class="error-icon">⚠️</div>
-                <p class="status-text">Failed to load movie. Tap to retry.</p>
-            </div>
-
-            <!-- Movie Details -->
-            <article id="movie-detail" class="movie-detail hidden">
-                <!-- Mobile Hero Section -->
-                <section class="mobile-hero">
-                    <div class="hero-backdrop" id="hero-backdrop"></div>
-                    <div class="hero-content">
-                        <div class="poster-section">
-                            <div class="poster-container">
-                                <img id="movie-poster" class="movie-poster" alt="Movie Poster">
-                                <div class="rating-overlay">
-                                    <span id="movie-rating" class="rating-score">N/A</span>
-                                    <span class="rating-label">/10</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="info-section">
-                            <header class="movie-header">
-                                <h1 id="movie-title" class="movie-title"></h1>
-                                <div id="movie-meta" class="movie-meta"></div>
-                                <div id="movie-genres" class="genres-list"></div>
-                            </header>
-
-                            <div class="action-buttons">
-                                <button id="watch-trailer-btn" class="btn-primary">
-                                    <span class="btn-icon">🎬</span>
-                                    <span>Watch Trailer</span>
-                                </button>
-                                <button id="add-watchlist-btn" class="btn-secondary">
-                                    <span class="btn-icon">➕</span>
-                                    <span>Watchlist</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Mobile Details Sections -->
-                <div class="details-container">
-                    <!-- Plot Overview -->
-                    <section class="detail-section">
-                        <h2 class="section-title">Plot</h2>
-                        <p id="movie-overview" class="overview-text"></p>
-                    </section>
-
-                    <!-- Quick Info -->
-                    <section class="detail-section">
-                        <h2 class="section-title">Movie Info</h2>
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <span class="info-label">Status</span>
-                                <span id="movie-status" class="info-value"></span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Release</span>
-                                <span id="movie-release" class="info-value"></span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Runtime</span>
-                                <span id="movie-runtime" class="info-value"></span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Language</span>
-                                <span id="movie-language" class="info-value"></span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Budget</span>
-                                <span id="movie-budget" class="info-value"></span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Revenue</span>
-                                <span id="movie-revenue" class="info-value"></span>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Cast -->
-                    <section class="detail-section">
-                        <h2 class="section-title">Cast</h2>
-                        <div id="movie-cast" class="cast-grid"></div>
-                    </section>
-
-                    <!-- Director & Crew -->
-                    <section class="detail-section">
-                        <h2 class="section-title">Crew</h2>
-                        <div class="crew-info">
-                            <div class="crew-item">
-                                <span class="crew-label">Director</span>
-                                <span id="movie-director" class="crew-value"></span>
-                            </div>
-                        </div>
-                    </section>
+            <!-- Movie Info Overlay -->
+            <div class="hero-info-overlay">
+                <div class="movie-poster-container">
+                    <img id="movie-poster" class="movie-poster" alt="Movie Poster">
                 </div>
-            </article>
-        </div>
+                <div class="movie-basic-info">
+                    <h1 id="movie-title" class="movie-title"></h1>
+                    <div class="movie-meta" id="movie-meta"></div>
+                    <div class="movie-genres" id="movie-genres"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Action Buttons -->
+        <section class="action-section">
+            <div class="action-buttons">
+                <button class="btn-primary" id="play-btn">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <span>Play</span>
+                </button>
+                <button class="btn-secondary" id="trailer-btn">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    <span>Watch Trailer</span>
+                </button>
+                <button class="btn-icon" id="add-list-btn" aria-label="Add to My List">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 5v14m-7-7h14"/>
+                    </svg>
+                </button>
+                <button class="btn-icon" id="like-btn" aria-label="Like">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                    </svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Movie Details -->
+        <section class="details-section">
+            <!-- Overview -->
+            <div class="detail-item">
+                <h3 class="detail-title">Plot</h3>
+                <p id="movie-overview" class="detail-text"></p>
+            </div>
+
+            <!-- Cast & Crew -->
+            <div class="detail-item">
+                <h3 class="detail-title">Cast & Crew</h3>
+                <div class="cast-info">
+                    <div class="info-row">
+                        <span class="info-label">Director:</span>
+                        <span id="movie-director" class="info-value">Loading...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Cast:</span>
+                        <span id="movie-cast" class="info-value">Loading...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Movie Info -->
+            <div class="detail-item">
+                <h3 class="detail-title">Details</h3>
+                <div class="movie-info-grid">
+                    <div class="info-row">
+                        <span class="info-label">Release Date:</span>
+                        <span id="movie-release" class="info-value">Loading...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Runtime:</span>
+                        <span id="movie-runtime" class="info-value">Loading...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Language:</span>
+                        <span id="movie-language" class="info-value">Loading...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Rating:</span>
+                        <span id="movie-rating" class="info-value">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- More Like This -->
+        <section class="related-section">
+            <h3 class="section-title">More Like This</h3>
+            <div class="related-movies" id="related-movies">
+                <div class="loading-placeholder">
+                    <div class="loading-spinner"></div>
+                    <span>Loading similar movies...</span>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <!-- Footer -->
-    <footer class="app-footer">
-        <div class="container">
-            <div class="footer-content">
-                <span class="footer-text">FilmyFeed Mobile • Powered by TMDb</span>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Mobile Trailer Modal -->
+    <!-- Trailer Modal -->
     <div id="trailer-modal" class="trailer-modal hidden">
-        <div class="trailer-dialog">
+        <div class="trailer-container">
             <div class="trailer-header">
                 <h3 id="trailer-title" class="trailer-title">Movie Trailer</h3>
-                <button id="trailer-close" class="trailer-close">✕</button>
+                <button id="trailer-close" class="trailer-close" aria-label="Close trailer">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 6l12 12M6 18L18 6"/>
+                    </svg>
+                </button>
             </div>
-            <div class="trailer-frame-wrap">
+            <div class="trailer-frame-wrapper">
                 <iframe 
                     id="trailer-iframe" 
                     width="100%" 
