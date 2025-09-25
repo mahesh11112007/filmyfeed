@@ -15,16 +15,11 @@ yarn-error.log*
 build/
 dist/
 
-# Cache directories
-.cache/
-.parcel-cache/
-
 # Editor directories and files
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS generated files
 .DS_Store
@@ -38,10 +33,6 @@ Thumbs.db
 # Logs
 logs
 *.log
-
-# Temporary folders
-tmp/
-temp/
 
 # Vercel
 .vercel/
