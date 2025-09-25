@@ -44,7 +44,7 @@ app.get('/api/*', async (req, res) => {
     }
 });
 
-// Fallback to index.html for SPA behavior if needed
+// Fallback to index.html for SPA behavior
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
