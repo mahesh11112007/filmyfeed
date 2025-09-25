@@ -1,50 +1,53 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FilmyFeed</title>
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FilmyFeed - Movie Discovery App</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header>
-    <div class="container">
-      <div class="logo" aria-label="FilmyFeed">
-        <a href="https://filmyfeed.vercel.app/">
-        <img src="logo.png" alt="FilmyFeed Logo" />
-        <h1>Filmy Feed</h1>
-        </a>
-      </div>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <img src="logo.svg" alt="FilmyFeed Logo">
+                <h1>FilmyFeed</h1>
+            </div>
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Search movies...">
+                <button id="search-btn">Search</button>
+            </div>
+        </div>
+    </header>
 
-      <div class="search-container">
-        <input type="text" id="search-input" placeholder="Search movies..." aria-label="Search movies" />
-        <button id="search-btn" aria-label="Search">Search</button>
-      </div>
+    <main>
+        <div class="container">
+            <h2 id="page-title">Latest Released Movies</h2>
+
+            <div id="loading" class="loading hidden">Loading movies...</div>
+            <div id="error" class="error hidden"></div>
+            <div id="no-results" class="no-results hidden">No movies found.</div>
+
+            <div id="movies-grid" class="movies-grid"></div>
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div id="modal" class="modal hidden">
+        <div class="modal-content">
+            <button class="close">&times;</button>
+            <div id="modal-body"></div>
+        </div>
     </div>
-  </header>
 
-  <main>
-    <h2 id="page-title">Latest Movies Released</h2>
-    <div id="movies-grid" class="movies-grid">Latest Movies Released</div>
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 FilmyFeed. Movie data provided by TMDb.</p>
+        </div>
+    </footer>
 
-    <div id="loading" class="loading hidden" role="status" aria-live="polite">Loading...</div>
-    <div id="error" class="error hidden" role="alert"></div>
-    <div id="no-results" class="no-results hidden">No movies found.</div>
-  </main>
-
-  <!-- Movie Detail Modal -->
-  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <div class="modal-content">
-      <button class="close" aria-label="Close modal">&times;</button>
-      <div id="modal-body"></div>
-    </div>
-  </div>
-
-  <footer>
-    <p>©FilmyFeed is Made By <b>Mahesh Vilasagaramb</b> Using <b>TMDb</b> Database</p>
-  </footer>
-
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
