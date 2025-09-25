@@ -1,53 +1,138 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FilmyFeed - Movie Discovery App</title>
+    <meta name="theme-color" content="#0b1020">
+    <meta name="description" content="Discover the latest movies, search your favorites, and explore detailed movie information with FilmyFeed - your professional movie discovery platform.">
+    <meta name="keywords" content="movies, cinema, film, entertainment, movie database, latest releases">
+    <meta name="author" content="FilmyFeed">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="FilmyFeed - Professional Movie Discovery">
+    <meta property="og:description" content="Discover the latest movies and explore detailed information">
+    <meta property="og:image" content="/logo.svg">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="FilmyFeed - Movie Discovery">
+    <meta name="twitter:description" content="Discover the latest movies and explore detailed information">
+
+    <title>FilmyFeed - Professional Movie Discovery Platform</title>
+
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style">
+    <link rel="preload" href="/logo.svg" as="image">
+
+    <!-- Stylesheets -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/logo.svg">
+    <link rel="apple-touch-icon" href="/logo.svg">
+
+    <!-- Remove no-js class -->
+    <script>document.documentElement.classList.remove('no-js')</script>
 </head>
 <body>
-    <header>
+    <!-- Professional Header -->
+    <header class="app-header" role="banner">
         <div class="container">
-            <div class="logo">
-                <img src="logo.png" alt="FilmyFeed Logo">
-                <h1>FilmyFeed</h1>
-            </div>
-            <div class="search-container">
-                <input type="text" id="search-input" placeholder="Search movies...">
-                <button id="search-btn">Search</button>
+            <div class="header-content">
+                <a href="/" class="brand" aria-label="FilmyFeed Home">
+                    <img src="logo.svg" alt="" class="brand-logo" width="36" height="36">
+                    <span class="brand-name">FilmyFeed</span>
+                    <span class="brand-tagline">Professional</span>
+                </a>
+
+                <div class="header-actions">
+                    <form class="search-form" role="search" aria-label="Search movies">
+                        <div class="search-wrapper">
+                            <input 
+                                type="search" 
+                                id="search-input" 
+                                class="search-input"
+                                placeholder="Search movies, actors, directors..." 
+                                autocomplete="off"
+                                spellcheck="false"
+                                aria-label="Movie search"
+                                maxlength="100"
+                            >
+                            <button type="submit" id="search-btn" class="search-btn" aria-label="Search">
+                                <span class="search-icon">🔍</span>
+                                <span class="search-text">Search</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </header>
 
-    <main>
+    <!-- Main Content -->
+    <main class="main-content" role="main">
         <div class="container">
-            <h2 id="page-title">Latest Released Movies</h2>
+            <!-- Page Header -->
+            <section class="page-header">
+                <h1 id="page-title" class="page-title">Latest Released Movies</h1>
+                <p class="page-subtitle">Discover the newest releases in theaters worldwide</p>
+            </section>
 
-            <div id="loading" class="loading hidden">Loading movies...</div>
-            <div id="error" class="error hidden"></div>
-            <div id="no-results" class="no-results hidden">No movies found.</div>
+            <!-- Status Messages -->
+            <div class="status-container">
+                <div id="loading" class="status-card loading-card hidden" role="status" aria-live="polite">
+                    <div class="loading-spinner"></div>
+                    <p class="status-text">Loading amazing movies...</p>
+                </div>
 
-            <div id="movies-grid" class="movies-grid"></div>
+                <div id="error" class="status-card error-card hidden" role="alert" aria-live="assertive">
+                    <div class="error-icon">⚠️</div>
+                    <p class="status-text">Something went wrong. Please try again.</p>
+                </div>
+
+                <div id="no-results" class="status-card empty-card hidden" role="status">
+                    <div class="empty-icon">🎬</div>
+                    <p class="status-text">No movies found. Try a different search term.</p>
+                </div>
+            </div>
+
+            <!-- Movies Grid -->
+            <section class="content-section">
+                <div id="movies-grid" class="movies-grid" role="grid" aria-label="Movies collection"></div>
+            </section>
         </div>
     </main>
 
-    <!-- Modal -->
-    <div id="modal" class="modal hidden">
-        <div class="modal-content">
-            <button class="close">&times;</button>
-            <div id="modal-body"></div>
-        </div>
-    </div>
-
-    <footer>
+    <!-- Professional Footer -->
+    <footer class="app-footer" role="contentinfo">
         <div class="container">
-            <p>&copy; 2025 FilmyFeed. Movie data provided by TMDb.</p>
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="logo.svg" alt="" class="footer-logo" width="24" height="24">
+                    <span class="footer-text">FilmyFeed Professional</span>
+                </div>
+                <div class="footer-links">
+                    <span class="footer-text">Powered by TMDb</span>
+                    <span class="footer-separator">•</span>
+                    <span class="footer-text">© 2025 FilmyFeed</span>
+                </div>
+            </div>
         </div>
     </footer>
 
+    <!-- Scripts -->
     <script src="script.js"></script>
+
+    <!-- Service Worker for PWA (optional) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
 </body>
 </html>
