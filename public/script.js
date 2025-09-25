@@ -1,15 +1,17 @@
 /**
- * FilmyFeed Professional - Home Page with YouTube Trailers
- * Features: Latest movies, search, collapsible search, trailer playback
+ * FilmyFeed Mobile - Touch-optimized with YouTube Trailers
+ * Features: Mobile-first design, touch gestures, trailer playback, collapsible search
  */
 
-class FilmyFeedApp {
+class FilmyFeedMobileApp {
     constructor() {
         this.API_BASE = '/api';
         this.IMG_BASE = 'https://image.tmdb.org/t/p/w500';
         this.currentQuery = '';
         this.isLoading = false;
         this.searchActive = false;
+        this.touchStartY = 0;
+        this.touchStartX = 0;
 
         // DOM elements
         this.elements = {
@@ -36,34 +38,49 @@ class FilmyFeedApp {
 
     init() {
         this.setupEventListeners();
+        this.setupTouchOptimizations();
         this.handleInitialLoad();
+        this.preventZoom();
     }
 
     setupEventListeners() {
         // Search toggle
-        this.elements.searchToggle?.addEventListener('click', () => {
+        this.elements.searchToggle?.addEventListener('click', (e) => {
+            e.preventDefault();
             this.toggleSearch();
         });
 
         // Search close
-        this.elements.searchClose?.addEventListener('click', () => {
+        this.elements.searchClose?.addEventListener('click', (e) => {
+            e.preventDefault();
             this.closeSearch();
         });
 
         // Search functionality
-        this.elements.searchBtn?.addEventListener('click', () => {
+        this.elements.searchBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
             this.handleSearch();
         });
 
         this.elements.searchInput?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
+                e.preventDefault();
                 this.handleSearch();
             }
         });
 
-        // Movie grid clicks (both trailer buttons and movie cards)
+        // Movie grid with touch support
         this.elements.moviesGrid?.addEventListener('click', (e) => {
             this.handleGridClick(e);
+        });
+
+        // Touch events for better mobile experience
+        this.elements.moviesGrid?.addEventListener('touchstart', (e) => {
+            this.handleTouchStart(e);
+        });
+
+        this.elements.moviesGrid?.addEventListener('touchend', (e) => {
+            this.handleTouchEnd(e);
         });
 
         // Browser navigation
@@ -71,12 +88,12 @@ class FilmyFeedApp {
             this.handleBrowserNavigation();
         });
 
-        // Error retry
+        // Error retry with touch support
         this.elements.errorEl?.addEventListener('click', () => {
             this.retry();
         });
 
-        // Close search on outside click
+        // Close search on outside click/touch
         document.addEventListener('click', (e) => {
             if (this.searchActive && 
                 !e.target.closest('.search-container') && 
@@ -85,7 +102,7 @@ class FilmyFeedApp {
             }
         });
 
-        // Close search/trailer on escape key
+        // Keyboard and escape handling
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (this.searchActive) {
@@ -97,7 +114,8 @@ class FilmyFeedApp {
         });
 
         // Trailer modal events
-        this.elements.trailerClose?.addEventListener('click', () => {
+        this.elements.trailerClose?.addEventListener('click', (e) => {
+            e.preventDefault();
             this.closeTrailer();
         });
 
@@ -106,6 +124,100 @@ class FilmyFeedApp {
                 this.closeTrailer();
             }
         });
+
+        // Handle orientation change
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                this.handleOrientationChange();
+            }, 100);
+        });
+
+        // Handle viewport resize
+        window.addEventListener('resize', this.debounce(() => {
+            this.handleViewportChange();
+        }, 250));
+    }
+
+    setupTouchOptimizations() {
+        // Disable double-tap zoom on buttons
+        const buttons = document.querySelectorAll('button, .movie-card');
+        buttons.forEach(button => {
+            button.addEventListener('touchend', (e) => {
+                e.preventDefault();
+            });
+        });
+
+        // Add touch feedback to cards
+        if (this.elements.moviesGrid) {
+            this.elements.moviesGrid.addEventListener('touchstart', (e) => {
+                const card = e.target.closest('.movie-card');
+                if (card) {
+                    card.style.transform = 'scale(0.98)';
+                    card.style.transition = 'transform 0.1s ease';
+                }
+            });
+
+            this.elements.moviesGrid.addEventListener('touchend', (e) => {
+                const card = e.target.closest('.movie-card');
+                if (card) {
+                    setTimeout(() => {
+                        card.style.transform = '';
+                        card.style.transition = '';
+                    }, 150);
+                }
+            });
+        }
+    }
+
+    preventZoom() {
+        // Prevent double-tap zoom on specific elements
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - this.lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            this.lastTouchEnd = now;
+        });
+    }
+
+    handleTouchStart(e) {
+        if (e.touches.length === 1) {
+            this.touchStartY = e.touches[0].clientY;
+            this.touchStartX = e.touches[0].clientX;
+        }
+    }
+
+    handleTouchEnd(e) {
+        if (!e.changedTouches.length) return;
+
+        const touchEndY = e.changedTouches[0].clientY;
+        const touchEndX = e.changedTouches[0].clientX;
+
+        const deltaY = this.touchStartY - touchEndY;
+        const deltaX = Math.abs(this.touchStartX - touchEndX);
+
+        // Detect swipe gestures (optional enhancement)
+        if (Math.abs(deltaY) > 50 && deltaX < 100) {
+            if (deltaY > 0) {
+                // Swipe up - could implement pull to refresh
+                this.handleSwipeUp();
+            } else {
+                // Swipe down
+                this.handleSwipeDown();
+            }
+        }
+    }
+
+    handleSwipeUp() {
+        // Optional: Implement pull to refresh
+        console.log('Swipe up detected');
+    }
+
+    handleSwipeDown() {
+        // Optional: Close search if open
+        if (this.searchActive) {
+            this.closeSearch();
+        }
     }
 
     toggleSearch() {
@@ -119,15 +231,28 @@ class FilmyFeedApp {
     openSearch() {
         this.searchActive = true;
         this.elements.searchWrapper?.classList.add('active');
-        // Focus on input after animation
+
+        // Focus with delay for mobile
         setTimeout(() => {
-            this.elements.searchInput?.focus();
-        }, 200);
+            if (this.elements.searchInput) {
+                this.elements.searchInput.focus();
+                // Scroll into view on mobile
+                this.elements.searchInput.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        }, 300);
     }
 
     closeSearch() {
         this.searchActive = false;
         this.elements.searchWrapper?.classList.remove('active');
+
+        // Blur input to hide mobile keyboard
+        if (this.elements.searchInput) {
+            this.elements.searchInput.blur();
+        }
     }
 
     handleInitialLoad() {
@@ -155,6 +280,7 @@ class FilmyFeedApp {
         }
 
         if (query === this.currentQuery) {
+            this.closeSearch();
             return;
         }
 
@@ -194,12 +320,11 @@ class FilmyFeedApp {
     }
 
     async handleGridClick(e) {
+        e.preventDefault();
+
         // Handle trailer button clicks
         const trailerBtn = e.target.closest('.btn-trailer');
         if (trailerBtn) {
-            e.preventDefault();
-            e.stopPropagation();
-
             const movieId = trailerBtn.dataset.id;
             const movieTitle = trailerBtn.dataset.title || 'Movie';
 
@@ -209,17 +334,13 @@ class FilmyFeedApp {
             return;
         }
 
-        // Handle movie card clicks (navigate to details)
+        // Handle movie card clicks (navigate to details or show modal)
         const card = e.target.closest('.movie-card');
         if (card && !this.isLoading && !e.target.closest('.movie-actions')) {
             const movieId = card.dataset.id;
             if (movieId) {
-                // Add loading state
-                card.style.opacity = '0.7';
-                card.style.pointerEvents = 'none';
-
-                // Navigate to movie details
-                window.location.href = `/movie.html?id=${encodeURIComponent(movieId)}`;
+                // On mobile, we can show details in a modal instead of navigation
+                await this.showMovieModal(movieId);
             }
         }
     }
@@ -230,6 +351,9 @@ class FilmyFeedApp {
             this.elements.trailerTitle.textContent = 'Loading trailer...';
             this.elements.trailerModal.classList.remove('hidden');
 
+            // Lock body scroll
+            document.body.style.overflow = 'hidden';
+
             // Fetch trailer
             const trailerKey = await this.fetchTrailerKey(movieId);
 
@@ -237,12 +361,12 @@ class FilmyFeedApp {
                 this.openTrailer(trailerKey, movieTitle);
             } else {
                 this.closeTrailer();
-                this.showTrailerError('Trailer not available for this movie');
+                this.showNotification('Trailer not available for this movie');
             }
         } catch (error) {
             console.error('Error loading trailer:', error);
             this.closeTrailer();
-            this.showTrailerError('Failed to load trailer');
+            this.showNotification('Failed to load trailer');
         }
     }
 
@@ -251,23 +375,19 @@ class FilmyFeedApp {
             const response = await this.fetchFromAPI(`movie/${movieId}/videos`);
             const videos = response?.results || [];
 
-            // Sort videos by preference: Official trailers first, then teasers
+            // Sort by preference: Official trailers first
             const sortedVideos = videos.sort((a, b) => {
-                // Prefer official videos
                 if (a.official !== b.official) {
                     return b.official - a.official;
                 }
-                // Prefer trailers over teasers
                 if (a.type !== b.type) {
                     if (a.type === 'Trailer' && b.type !== 'Trailer') return -1;
                     if (b.type === 'Trailer' && a.type !== 'Trailer') return 1;
-                    if (a.type === 'Teaser' && b.type !== 'Teaser') return -1;
-                    if (b.type === 'Teaser' && a.type !== 'Teaser') return 1;
                 }
                 return 0;
             });
 
-            // Find the best YouTube video
+            // Find best YouTube video
             const youtubeVideo = sortedVideos.find(video => 
                 video.site === 'YouTube' && 
                 (video.type === 'Trailer' || video.type === 'Teaser')
@@ -282,10 +402,10 @@ class FilmyFeedApp {
 
     openTrailer(youtubeKey, movieTitle) {
         this.elements.trailerTitle.textContent = `${movieTitle} - Trailer`;
-        this.elements.trailerIframe.src = `https://www.youtube.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1`;
+        this.elements.trailerIframe.src = `https://www.youtube.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
         this.elements.trailerModal.classList.remove('hidden');
 
-        // Prevent body scroll
+        // Lock body scroll
         document.body.style.overflow = 'hidden';
     }
 
@@ -293,22 +413,30 @@ class FilmyFeedApp {
         this.elements.trailerIframe.src = '';
         this.elements.trailerModal.classList.add('hidden');
 
-        // Re-enable body scroll
+        // Restore body scroll
         document.body.style.overflow = '';
     }
 
-    showTrailerError(message) {
-        // Simple alert for now - could be enhanced with a custom modal
-        alert(message);
+    async showMovieModal(movieId) {
+        // Simple implementation - could be enhanced with a proper modal
+        try {
+            const movie = await this.fetchFromAPI(`movie/${movieId}`);
+            if (movie) {
+                const message = `${movie.title}\n\nRelease: ${movie.release_date || 'TBA'}\nRating: ${movie.vote_average?.toFixed(1) || 'N/A'}/10\n\n${movie.overview || 'No overview available.'}`;
+                alert(message);
+            }
+        } catch (error) {
+            console.error('Error fetching movie details:', error);
+        }
     }
 
     async loadLatestMovies() {
-        this.updatePageHeader('Latest Released Movies', 'Discover the newest releases in theaters worldwide with trailers');
+        this.updatePageHeader('Latest Movies', 'Discover new releases with trailers');
         await this.fetchAndRenderMovies('latest');
     }
 
     async loadSearchResults(query) {
-        this.updatePageHeader(`Search Results for "${query}"`, `Found movies matching your search with trailers`);
+        this.updatePageHeader(`Search: "${query}"`, 'Movies matching your search');
         await this.fetchAndRenderMovies('search', { query });
     }
 
@@ -330,14 +458,14 @@ class FilmyFeedApp {
 
         } catch (error) {
             console.error('Error fetching movies:', error);
-            this.showError('Failed to load movies. Click to retry.');
+            this.showError('Failed to load movies. Tap to retry.');
         } finally {
             this.hideLoading();
         }
     }
 
     async fetchLatestMovies() {
-        // Fetch multiple pages for more variety
+        // Fetch multiple pages for variety
         const [page1, page2] = await Promise.all([
             this.fetchFromAPI('movie/now_playing', { 
                 page: 1, 
@@ -389,16 +517,16 @@ class FilmyFeedApp {
             return;
         }
 
-        const moviesHTML = movies.map(movie => this.createMovieCard(movie)).join('');
+        const moviesHTML = movies.map(movie => this.createMobileMovieCard(movie)).join('');
         this.elements.moviesGrid.innerHTML = moviesHTML;
 
-        // Animate cards in
-        this.animateCards();
+        // Animate cards for mobile
+        this.animateCardsForMobile();
 
         this.hideAllStatus();
     }
 
-    createMovieCard(movie) {
+    createMobileMovieCard(movie) {
         const posterUrl = movie.poster_path 
             ? `${this.IMG_BASE}${movie.poster_path}` 
             : null;
@@ -417,7 +545,7 @@ class FilmyFeedApp {
                 <div class="poster-container">
                     ${posterUrl 
                         ? `<img class="movie-poster" src="${posterUrl}" alt="${title} poster" loading="lazy">` 
-                        : `<div class="movie-poster" aria-label="No poster available"></div>`
+                        : `<div class="movie-poster" style="display:flex;align-items:center;justify-content:center;color:#666;font-size:0.8rem;">No Poster</div>`
                     }
                 </div>
                 <div class="movie-info">
@@ -431,12 +559,10 @@ class FilmyFeedApp {
                         </span>
                     </div>
                     <div class="movie-actions">
-                        <button class="btn-trailer" data-id="${movie.id}" data-title="${title}" 
-                                aria-label="Watch ${title} trailer">
-                            ðŸŽ¬ Watch Trailer
+                        <button class="btn-trailer" data-id="${movie.id}" data-title="${title}">
+                            ðŸŽ¬ Trailer
                         </button>
-                        <button class="btn-details" onclick="window.location.href='/movie.html?id=${movie.id}'"
-                                aria-label="View ${title} details">
+                        <button class="btn-details" data-id="${movie.id}">
                             Details
                         </button>
                     </div>
@@ -445,17 +571,17 @@ class FilmyFeedApp {
         `;
     }
 
-    animateCards() {
+    animateCardsForMobile() {
         const cards = this.elements.moviesGrid.querySelectorAll('.movie-card');
         cards.forEach((card, index) => {
             card.style.opacity = '0';
             card.style.transform = 'translateY(20px)';
 
             setTimeout(() => {
-                card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
                 card.style.opacity = '1';
                 card.style.transform = 'translateY(0)';
-            }, index * 50);
+            }, index * 100); // Slower stagger for mobile
         });
     }
 
@@ -489,39 +615,4 @@ class FilmyFeedApp {
             if (textEl) {
                 textEl.textContent = message;
             }
-            this.elements.errorEl.classList.remove('hidden');
-        }
-        this.elements.moviesGrid.innerHTML = '';
-    }
-
-    showNoResults() {
-        this.hideAllStatus();
-        this.elements.noResultsEl?.classList.remove('hidden');
-        this.elements.moviesGrid.innerHTML = '';
-    }
-
-    hideAllStatus() {
-        this.elements.loadingEl?.classList.add('hidden');
-        this.elements.errorEl?.classList.add('hidden');
-        this.elements.noResultsEl?.classList.add('hidden');
-    }
-
-    retry() {
-        if (this.currentQuery) {
-            this.loadSearchResults(this.currentQuery);
-        } else {
-            this.loadLatestMovies();
-        }
-    }
-
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-}
-
-// Initialize app when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    window.filmyFeedApp = new FilmyFeedApp();
-});
+     
