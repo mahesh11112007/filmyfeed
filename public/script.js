@@ -1,272 +1,463 @@
-// DOM Elements
-const moviesGrid = document.getElementById('movies-grid');
-const searchInput = document.getElementById('search-input');
-const searchBtn = document.getElementById('search-btn');
-const searchToggle = document.getElementById('search-toggle');
-const searchWrapper = document.getElementById('search-wrapper');
-const searchClose = document.getElementById('search-close');
-const pageTitle = document.getElementById('page-title');
-const loadingEl = document.getElementById('loading');
-const errorEl = document.getElementById('error');
-const noResultsEl = document.getElementById('no-results');
-const modal = document.getElementById('modal');
-const modalBody = document.getElementById('modal-body');
-const closeModalBtn = document.querySelector('.close');
+/**
+ * FilmyFeed Mobile App - Netflix-style Interface
+ * Features: Hero section, horizontal scrolling, mobile search, navigation to movie details
+ */
 
-// State
-let currentPage = 1;
-let isSearching = false;
-let currentQuery = '';
-let searchActive = false;
+class FilmyFeedApp {
+    constructor() {
+        this.API_BASE = '/api';
+        this.IMG_BASE = 'https://image.tmdb.org/t/p/w500';
+        this.BACKDROP_BASE = 'https://image.tmdb.org/t/p/original';
+        this.currentQuery = '';
+        this.isLoading = false;
+        this.searchActive = false;
 
-const IMG_BASE = 'https://image.tmdb.org/t/p/w500';
+        // DOM elements
+        this.elements = {
+            // Header
+            searchBtn: document.getElementById('search-btn'),
+            searchOverlay: document.getElementById('search-overlay'),
+            searchInput: document.getElementById('search-input'),
+            searchClose: document.getElementById('search-close'),
 
-// Collapsible Search Functions
-function toggleSearch() {
-    if (searchActive) {
-        closeSearch();
-    } else {
-        openSearch();
+            // Hero
+            heroSection: document.getElementById('hero-section'),
+            heroBackground: document.getElementById('hero-background'),
+            heroTitle: document.getElementById('hero-title'),
+            heroDescription: document.getElementById('hero-description'),
+            heroPlayBtn: document.getElementById('hero-play-btn'),
+            heroInfoBtn: document.getElementById('hero-info-btn'),
+
+            // Content rows
+            featuredRow: document.getElementById('featured-row'),
+            moviesRow: document.getElementById('movies-row'),
+
+            // Search results
+            searchResultsSection: document.getElementById('search-results-section'),
+            searchResultsTitle: document.getElementById('search-results-title'),
+            searchResultsGrid: document.getElementById('search-results-grid'),
+
+            // Status
+            loadingStatus: document.getElementById('loading-status'),
+            errorStatus: document.getElementById('error-status'),
+            noResultsStatus: document.getElementById('no-results-status'),
+
+            // Navigation
+            bottomNav: document.querySelector('.bottom-nav'),
+            navItems: document.querySelectorAll('.nav-item')
+        };
+
+        this.init();
     }
-}
 
-function openSearch() {
-    searchActive = true;
-    searchWrapper.classList.add('active');
-
-    // Focus on input after animation
-    setTimeout(() => {
-        searchInput.focus();
-    }, 200);
-}
-
-function closeSearch() {
-    searchActive = false;
-    searchWrapper.classList.remove('active');
-
-    // Blur input to hide mobile keyboard
-    searchInput.blur();
-}
-
-// Search Event Listeners
-if (searchToggle) {
-    searchToggle.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleSearch();
-    });
-}
-
-if (searchClose) {
-    searchClose.addEventListener('click', (e) => {
-        e.preventDefault();
-        closeSearch();
-    });
-}
-
-// Close search on outside click
-document.addEventListener('click', (e) => {
-    if (searchActive && 
-        !e.target.closest('.search-wrapper') && 
-        !e.target.closest('.search-toggle')) {
-        closeSearch();
+    init() {
+        this.setupEventListeners();
+        this.loadInitialContent();
+        this.handleUrlParams();
     }
-});
 
-// Close search on escape key
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && searchActive) {
-        closeSearch();
+    setupEventListeners() {
+        // Search functionality
+        this.elements.searchBtn?.addEventListener('click', () => {
+            this.openSearch();
+        });
+
+        this.elements.searchClose?.addEventListener('click', () => {
+            this.closeSearch();
+        });
+
+        this.elements.searchInput?.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            if (query) {
+                this.performSearch(query);
+            } else {
+                this.showHomeContent();
+            }
+        });
+
+        // Search overlay background tap
+        this.elements.searchOverlay?.addEventListener('click', (e) => {
+            if (e.target === this.elements.searchOverlay) {
+                this.closeSearch();
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.searchActive) {
+                this.closeSearch();
+            }
+        });
+
+        // Hero actions
+        this.elements.heroPlayBtn?.addEventListener('click', () => {
+            this.playHeroMovie();
+        });
+
+        this.elements.heroInfoBtn?.addEventListener('click', () => {
+            this.showHeroMovieInfo();
+        });
+
+        // Bottom navigation
+        this.elements.navItems?.forEach(item => {
+            item.addEventListener('click', () => {
+                this.handleNavigation(item.dataset.tab);
+            });
+        });
+
+        // Error retry
+        this.elements.errorStatus?.addEventListener('click', () => {
+            this.retryLoad();
+        });
+
+        // Movie card clicks (using event delegation)
+        document.addEventListener('click', (e) => {
+            const movieCard = e.target.closest('.movie-card, .search-card');
+            if (movieCard && movieCard.dataset.id) {
+                this.navigateToMovie(movieCard.dataset.id);
+            }
+        });
     }
-});
 
-// Fetch movies via local proxy
-async function fetchMovies(endpoint, params = {}) {
-    const url = new URL(`/api/${endpoint}`, window.location.origin);
-    Object.keys(params).forEach((key) => {
-        if (params[key] !== undefined && params[key] !== null) {
-            url.searchParams.append(key, params[key]);
+    handleUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const query = urlParams.get('q');
+
+        if (query) {
+            this.elements.searchInput.value = query;
+            this.openSearch();
+            this.performSearch(query);
         }
-    });
-
-    try {
-        showLoading();
-        const res = await fetch(url.toString());
-        if (!res.ok) throw new Error('Network response was not ok');
-        const data = await res.json();
-        return data;
-    } catch (err) {
-        showError('Failed to fetch movies. Please try again later.');
-        return null;
-    } finally {
-        hideLoading();
-    }
-}
-
-// Render movies grid
-function renderMovies(movies) {
-    if (!movies || movies.length === 0) {
-        noResultsEl.classList.remove('hidden');
-        moviesGrid.innerHTML = '';
-        return;
     }
 
-    noResultsEl.classList.add('hidden');
-    moviesGrid.innerHTML = movies
-        .map((movie) => {
-            const posterPath = movie.poster_path ? `${IMG_BASE}${movie.poster_path}` : '';
-            const title = movie.title || 'Untitled';
-            const date = movie.release_date || 'N/A';
-            const rating = typeof movie.vote_average === 'number' ? movie.vote_average.toFixed(1) : 'N/A';
+    // Search Functions
+    openSearch() {
+        this.searchActive = true;
+        this.elements.searchOverlay?.classList.add('active');
+        setTimeout(() => {
+            this.elements.searchInput?.focus();
+        }, 300);
+    }
 
-            return `
-                <div class="movie-card" data-id="${movie.id}">
-                    ${posterPath 
-                        ? `<img class="movie-poster" src="${posterPath}" alt="${escapeHtml(title)} poster" loading="lazy">` 
-                        : '<div class="movie-poster" style="display:flex;align-items:center;justify-content:center;color:#666;font-size:0.9rem;">No Poster Available</div>'
-                    }
-                    <div class="movie-info">
-                        <h3 class="movie-title" title="${escapeHtml(title)}">${escapeHtml(title)}</h3>
-                        <div class="movie-date">${escapeHtml(date)}</div>
-                        <div class="movie-rating">â˜… ${rating}/10</div>
-                    </div>
+    closeSearch() {
+        this.searchActive = false;
+        this.elements.searchOverlay?.classList.remove('active');
+        this.showHomeContent();
+        this.elements.searchInput.value = '';
+
+        // Update URL
+        window.history.pushState({}, '', '/');
+    }
+
+    async performSearch(query) {
+        if (!query.trim()) return;
+
+        this.currentQuery = query;
+        this.showSearchResults();
+
+        // Update URL
+        window.history.pushState({}, '', `/?q=${encodeURIComponent(query)}`);
+
+        try {
+            const data = await this.fetchFromAPI('search/movie', {
+                query: query,
+                page: 1,
+                include_adult: false,
+                language: 'en-US'
+            });
+
+            this.renderSearchResults(data.results || []);
+
+        } catch (error) {
+            console.error('Search error:', error);
+            this.showError('Search failed. Please try again.');
+        }
+    }
+
+    // Content Loading
+    async loadInitialContent() {
+        try {
+            this.showLoading();
+
+            // Load hero movie and content rows in parallel
+            await Promise.all([
+                this.loadHeroContent(),
+                this.loadFeaturedContent(),
+                this.loadMoviesContent()
+            ]);
+
+            this.hideLoading();
+
+        } catch (error) {
+            console.error('Loading error:', error);
+            this.showError('Failed to load content. Tap to retry.');
+        }
+    }
+
+    async loadHeroContent() {
+        try {
+            // Get now playing movies for hero
+            const data = await this.fetchFromAPI('movie/now_playing', {
+                page: 1,
+                language: 'en-US'
+            });
+
+            const movies = data.results || [];
+            if (movies.length > 0) {
+                const heroMovie = movies[0]; // Use first movie as hero
+                this.renderHeroMovie(heroMovie);
+            }
+
+        } catch (error) {
+            console.error('Hero content error:', error);
+        }
+    }
+
+    async loadFeaturedContent() {
+        try {
+            const data = await this.fetchFromAPI('movie/popular', {
+                page: 1,
+                language: 'en-US'
+            });
+
+            this.renderContentRow(this.elements.featuredRow, data.results || []);
+
+        } catch (error) {
+            console.error('Featured content error:', error);
+            this.renderContentRow(this.elements.featuredRow, []);
+        }
+    }
+
+    async loadMoviesContent() {
+        try {
+            const data = await this.fetchFromAPI('movie/top_rated', {
+                page: 1,
+                language: 'en-US'
+            });
+
+            this.renderContentRow(this.elements.moviesRow, data.results || []);
+
+        } catch (error) {
+            console.error('Movies content error:', error);
+            this.renderContentRow(this.elements.moviesRow, []);
+        }
+    }
+
+    // Rendering Functions
+    renderHeroMovie(movie) {
+        if (!movie || !this.elements.heroTitle) return;
+
+        // Update hero background
+        if (movie.backdrop_path && this.elements.heroBackground) {
+            this.elements.heroBackground.style.backgroundImage = 
+                `url(${this.BACKDROP_BASE}${movie.backdrop_path})`;
+        }
+
+        // Update hero content
+        this.elements.heroTitle.textContent = movie.title || 'Featured Movie';
+        this.elements.heroDescription.textContent = 
+            movie.overview || 'No description available.';
+
+        // Store movie ID for hero actions
+        this.elements.heroPlayBtn.dataset.movieId = movie.id;
+        this.elements.heroInfoBtn.dataset.movieId = movie.id;
+    }
+
+    renderContentRow(container, movies) {
+        if (!container) return;
+
+        if (!movies || movies.length === 0) {
+            container.innerHTML = '<div class="loading-placeholder"><span>No content available</span></div>';
+            return;
+        }
+
+        const moviesHTML = movies.map(movie => this.createMovieCard(movie)).join('');
+        container.innerHTML = moviesHTML;
+    }
+
+    renderSearchResults(movies) {
+        if (!this.elements.searchResultsGrid) return;
+
+        if (!movies || movies.length === 0) {
+            this.elements.searchResultsGrid.innerHTML = 
+                '<div class="loading-placeholder"><span>No results found</span></div>';
+            return;
+        }
+
+        const moviesHTML = movies.map(movie => this.createSearchCard(movie)).join('');
+        this.elements.searchResultsGrid.innerHTML = moviesHTML;
+
+        // Update search results title
+        if (this.elements.searchResultsTitle) {
+            this.elements.searchResultsTitle.textContent = 
+                `Search results for "${this.currentQuery}"`;
+        }
+    }
+
+    createMovieCard(movie) {
+        const posterUrl = movie.poster_path 
+            ? `${this.IMG_BASE}${movie.poster_path}` 
+            : null;
+
+        const title = this.escapeHtml(movie.title || 'Untitled');
+        const year = movie.release_date 
+            ? new Date(movie.release_date).getFullYear() 
+            : '';
+
+        return `
+            <div class="movie-card" data-id="${movie.id}" role="button" tabindex="0">
+                ${posterUrl 
+                    ? `<img class="card-poster" src="${posterUrl}" alt="${title}" loading="lazy">` 
+                    : '<div class="card-poster" style="background: var(--bg-card); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.8rem;">No Image</div>'
+                }
+                <div class="card-info">
+                    <div class="card-title">${title}</div>
+                    ${year ? `<div class="card-year">${year}</div>` : ''}
                 </div>
-            `;
-        })
-        .join('');
-}
+            </div>
+        `;
+    }
 
-// Show movie details in modal
-async function showMovieDetail(id) {
-    const data = await fetchMovies(`movie/${id}`);
-    if (!data) return;
+    createSearchCard(movie) {
+        const posterUrl = movie.poster_path 
+            ? `${this.IMG_BASE}${movie.poster_path}` 
+            : null;
 
-    const poster = data.poster_path 
-        ? `<img src="${IMG_BASE}${data.poster_path}" alt="${escapeHtml(data.title)} poster">` 
-        : '<div style="background:#333;padding:2rem;text-align:center;color:#666;">No Poster Available</div>';
+        const title = this.escapeHtml(movie.title || 'Untitled');
+        const year = movie.release_date 
+            ? new Date(movie.release_date).getFullYear() 
+            : '';
 
-    const title = data.title || 'Untitled';
-    const date = data.release_date || 'N/A';
-    const rating = typeof data.vote_average === 'number' ? data.vote_average.toFixed(1) : 'N/A';
-    const votes = typeof data.vote_count === 'number' ? data.vote_count : 0;
-    const lang = (data.original_language || 'N/A').toUpperCase();
-    const overview = data.overview || 'No overview available.';
+        return `
+            <div class="search-card movie-card" data-id="${movie.id}" role="button" tabindex="0">
+                ${posterUrl 
+                    ? `<img class="card-poster" src="${posterUrl}" alt="${title}" loading="lazy">` 
+                    : '<div class="card-poster" style="background: var(--bg-card); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.8rem;">No Image</div>'
+                }
+                <div class="card-info">
+                    <div class="card-title">${title}</div>
+                    ${year ? `<div class="card-year">${year}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }
 
-    modalBody.innerHTML = `
-        ${poster}
-        <h2 style="margin: 1rem 0;">${escapeHtml(title)}</h2>
-        <p><strong>Release Date:</strong> ${escapeHtml(date)}</p>
-        <p><strong>Rating:</strong> ${rating}/10 (${votes.toLocaleString()} votes)</p>
-        <p><strong>Language:</strong> ${escapeHtml(lang)}</p>
-        <p style="margin-top: 1rem;"><strong>Overview:</strong></p>
-        <p>${escapeHtml(overview)}</p>
-    `;
+    // Navigation Functions
+    navigateToMovie(movieId) {
+        if (!movieId) return;
 
-    modal.classList.remove('hidden');
-}
+        // Navigate to movie details page
+        window.location.href = `/movie.html?id=${encodeURIComponent(movieId)}`;
+    }
 
-// Event Listeners
-if (moviesGrid) {
-    moviesGrid.addEventListener('click', (e) => {
-        const card = e.target.closest('.movie-card');
-        if (card) showMovieDetail(card.dataset.id);
-    });
-}
-
-if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', () => {
-        modal.classList.add('hidden');
-    });
-}
-
-if (modal) {
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.add('hidden');
+    playHeroMovie() {
+        const movieId = this.elements.heroPlayBtn?.dataset.movieId;
+        if (movieId) {
+            this.navigateToMovie(movieId);
         }
-    });
-}
-
-if (searchBtn) {
-    searchBtn.addEventListener('click', handleSearch);
-}
-
-if (searchInput) {
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSearch();
-    });
-}
-
-function handleSearch() {
-    const query = searchInput ? searchInput.value.trim() : '';
-    if (!query) {
-        loadNowPlaying();
-        closeSearch();
-        return;
     }
 
-    currentQuery = query;
-    isSearching = true;
-    currentPage = 1;
-    loadSearchResults();
-    closeSearch();
-}
-
-// Loaders
-function loadNowPlaying() {
-    isSearching = false;
-    if (pageTitle) pageTitle.textContent = 'Now Playing';
-    fetchAndRenderNowPlaying();
-}
-
-async function fetchAndRenderNowPlaying() {
-    const page1 = await fetchMovies('movie/now_playing', { page: 1, language: 'en-US', region: 'IN' });
-    const page2 = await fetchMovies('movie/now_playing', { page: 2, language: 'en-US', region: 'IN' });
-    const allMovies = [...(page1?.results || []), ...(page2?.results || [])];
-    renderMovies(allMovies);
-}
-
-async function loadSearchResults() {
-    if (pageTitle) pageTitle.textContent = `Search Results for "${currentQuery}"`;
-    const data = await fetchMovies('search/movie', { 
-        query: currentQuery, 
-        page: currentPage, 
-        include_adult: false, 
-        language: 'en-US' 
-    });
-    renderMovies(data?.results || []);
-}
-
-// UI Helpers
-function showLoading() {
-    if (loadingEl) loadingEl.classList.remove('hidden');
-    if (errorEl) errorEl.classList.add('hidden');
-    if (noResultsEl) noResultsEl.classList.add('hidden');
-}
-
-function hideLoading() {
-    if (loadingEl) loadingEl.classList.add('hidden');
-}
-
-function showError(message) {
-    if (errorEl) {
-        errorEl.textContent = message;
-        errorEl.classList.remove('hidden');
+    showHeroMovieInfo() {
+        const movieId = this.elements.heroInfoBtn?.dataset.movieId;
+        if (movieId) {
+            this.navigateToMovie(movieId);
+        }
     }
-    if (loadingEl) loadingEl.classList.add('hidden');
-    if (noResultsEl) noResultsEl.classList.add('hidden');
+
+    handleNavigation(tab) {
+        // Update active nav item
+        this.elements.navItems?.forEach(item => {
+            item.classList.toggle('active', item.dataset.tab === tab);
+        });
+
+        switch (tab) {
+            case 'home':
+                this.closeSearch();
+                break;
+            case 'search':
+                this.openSearch();
+                break;
+            case 'coming-soon':
+            case 'downloads':
+            case 'more':
+                // Placeholder for future functionality
+                console.log(`Navigation to ${tab} - Coming soon!`);
+                break;
+        }
+    }
+
+    // UI State Functions
+    showHomeContent() {
+        this.elements.searchResultsSection?.classList.add('hidden');
+        document.querySelectorAll('.content-section:not(#search-results-section)')
+            .forEach(section => section.classList.remove('hidden'));
+    }
+
+    showSearchResults() {
+        document.querySelectorAll('.content-section:not(#search-results-section)')
+            .forEach(section => section.classList.add('hidden'));
+        this.elements.searchResultsSection?.classList.remove('hidden');
+    }
+
+    showLoading() {
+        this.isLoading = true;
+        this.hideAllStatus();
+        this.elements.loadingStatus?.classList.remove('hidden');
+    }
+
+    hideLoading() {
+        this.isLoading = false;
+        this.elements.loadingStatus?.classList.add('hidden');
+    }
+
+    showError(message) {
+        this.hideAllStatus();
+        if (this.elements.errorStatus) {
+            const span = this.elements.errorStatus.querySelector('span');
+            if (span) span.textContent = message;
+            this.elements.errorStatus.classList.remove('hidden');
+        }
+    }
+
+    hideAllStatus() {
+        this.elements.loadingStatus?.classList.add('hidden');
+        this.elements.errorStatus?.classList.add('hidden');
+        this.elements.noResultsStatus?.classList.add('hidden');
+    }
+
+    retryLoad() {
+        this.loadInitialContent();
+    }
+
+    // API Functions
+    async fetchFromAPI(endpoint, params = {}) {
+        const url = new URL(`${this.API_BASE}/${endpoint}`, window.location.origin);
+
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+                url.searchParams.append(key, value);
+            }
+        });
+
+        const response = await fetch(url.toString());
+
+        if (!response.ok) {
+            throw new Error(`API request failed: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    // Utility Functions
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
 }
 
-function escapeHtml(str) {
-    return String(str)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
-
-// Initialize
+// Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('ðŸŽ¬ FilmyFeed loaded with collapsible search!');
-    loadNowPlaying();
+    console.log('ðŸŽ¬ FilmyFeed Mobile App initialized');
+    window.filmyFeedApp = new FilmyFeedApp();
 });
