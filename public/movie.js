@@ -1,12 +1,13 @@
 /**
- * FilmyFeed Professional - Movie Details with YouTube Trailers
- * Features: Complete movie information, trailer playback, collapsible search
+ * FilmyFeed Mobile - Movie Details with YouTube Trailers
+ * Mobile-optimized movie information, trailer playback, touch interactions
  */
 
-class MovieDetailsApp {
+class MovieDetailsMobile {
     constructor() {
         this.API_BASE = '/api';
         this.IMG_BASE = 'https://image.tmdb.org/t/p/w500';
+        this.BACKDROP_BASE = 'https://image.tmdb.org/t/p/w1280';
         this.movieId = null;
         this.movieData = null;
         this.creditsData = null;
@@ -15,32 +16,30 @@ class MovieDetailsApp {
         // DOM elements
         this.elements = {
             // Status elements
-            loadingEl: document.getElementById('detail-loading'),
-            errorEl: document.getElementById('detail-error'),
+            loadingEl: document.getElementById('movie-loading'),
+            errorEl: document.getElementById('movie-error'),
             movieDetail: document.getElementById('movie-detail'),
 
-            // Movie info elements
-            poster: document.getElementById('detail-poster'),
-            title: document.getElementById('detail-title'),
-            meta: document.getElementById('detail-meta'),
-            genres: document.getElementById('detail-genres'),
-            tagline: document.getElementById('detail-tagline'),
-            rating: document.getElementById('detail-rating'),
-            ratingBadge: document.getElementById('detail-rating-badge'),
-            overview: document.getElementById('detail-overview'),
+            // Hero section
+            heroBackdrop: document.getElementById('hero-backdrop'),
+            moviePoster: document.getElementById('movie-poster'),
+            movieTitle: document.getElementById('movie-title'),
+            movieMeta: document.getElementById('movie-meta'),
+            movieGenres: document.getElementById('movie-genres'),
+            movieRating: document.getElementById('movie-rating'),
             watchTrailerBtn: document.getElementById('watch-trailer-btn'),
+            addWatchlistBtn: document.getElementById('add-watchlist-btn'),
 
-            // Details elements
-            director: document.getElementById('detail-director'),
-            cast: document.getElementById('detail-cast'),
-            status: document.getElementById('detail-status'),
-            release: document.getElementById('detail-release'),
-            runtime: document.getElementById('detail-runtime'),
-            language: document.getElementById('detail-language'),
-            budget: document.getElementById('detail-budget'),
-            revenue: document.getElementById('detail-revenue'),
-            homepage: document.getElementById('detail-homepage'),
-            homepageSection: document.getElementById('homepage-section'),
+            // Details sections
+            movieOverview: document.getElementById('movie-overview'),
+            movieStatus: document.getElementById('movie-status'),
+            movieRelease: document.getElementById('movie-release'),
+            movieRuntime: document.getElementById('movie-runtime'),
+            movieLanguage: document.getElementById('movie-language'),
+            movieBudget: document.getElementById('movie-budget'),
+            movieRevenue: document.getElementById('movie-revenue'),
+            movieCast: document.getElementById('movie-cast'),
+            movieDirector: document.getElementById('movie-director'),
 
             // Search elements
             searchToggle: document.getElementById('search-toggle'),
@@ -49,7 +48,7 @@ class MovieDetailsApp {
             searchBtn: document.getElementById('search-btn'),
             searchClose: document.getElementById('search-close'),
 
-            // Trailer modal elements
+            // Trailer modal
             trailerModal: document.getElementById('trailer-modal'),
             trailerClose: document.getElementById('trailer-close'),
             trailerIframe: document.getElementById('trailer-iframe'),
@@ -61,34 +60,46 @@ class MovieDetailsApp {
 
     init() {
         this.setupEventListeners();
+        this.setupTouchOptimizations();
         this.extractMovieId();
         this.loadMovieDetails();
     }
 
     setupEventListeners() {
-        // Search toggle functionality
-        this.elements.searchToggle?.addEventListener('click', () => {
+        // Search toggle
+        this.elements.searchToggle?.addEventListener('click', (e) => {
+            e.preventDefault();
             this.toggleSearch();
         });
 
-        this.elements.searchClose?.addEventListener('click', () => {
+        this.elements.searchClose?.addEventListener('click', (e) => {
+            e.preventDefault();
             this.closeSearch();
         });
 
         // Search functionality
-        this.elements.searchBtn?.addEventListener('click', () => {
+        this.elements.searchBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
             this.handleSearch();
         });
 
         this.elements.searchInput?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
+                e.preventDefault();
                 this.handleSearch();
             }
         });
 
         // Watch trailer button
-        this.elements.watchTrailerBtn?.addEventListener('click', () => {
+        this.elements.watchTrailerBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
             this.playTrailer();
+        });
+
+        // Add to watchlist button (placeholder)
+        this.elements.addWatchlistBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.toggleWatchlist();
         });
 
         // Error retry
@@ -99,13 +110,13 @@ class MovieDetailsApp {
         // Close search on outside click
         document.addEventListener('click', (e) => {
             if (this.searchActive && 
-                !e.target.closest('.search-container') && 
+                !e.target.closest('.search-wrapper') && 
                 !e.target.closest('.search-toggle')) {
                 this.closeSearch();
             }
         });
 
-        // Close search/trailer on escape
+        // Keyboard handling
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (this.searchActive) {
@@ -117,7 +128,8 @@ class MovieDetailsApp {
         });
 
         // Trailer modal events
-        this.elements.trailerClose?.addEventListener('click', () => {
+        this.elements.trailerClose?.addEventListener('click', (e) => {
+            e.preventDefault();
             this.closeTrailer();
         });
 
@@ -125,6 +137,24 @@ class MovieDetailsApp {
             if (e.target === this.elements.trailerModal) {
                 this.closeTrailer();
             }
+        });
+    }
+
+    setupTouchOptimizations() {
+        // Add touch feedback to buttons
+        const buttons = document.querySelectorAll('button, .back-btn');
+        buttons.forEach(button => {
+            button.addEventListener('touchstart', () => {
+                button.style.transform = 'scale(0.98)';
+                button.style.transition = 'transform 0.1s ease';
+            });
+
+            button.addEventListener('touchend', () => {
+                setTimeout(() => {
+                    button.style.transform = '';
+                    button.style.transition = '';
+                }, 150);
+            });
         });
     }
 
@@ -139,16 +169,20 @@ class MovieDetailsApp {
     openSearch() {
         this.searchActive = true;
         this.elements.searchWrapper?.classList.add('active');
+
         setTimeout(() => {
-            this.elements.searchInput?.focus();
-        }, 200);
+            if (this.elements.searchInput) {
+                this.elements.searchInput.focus();
+            }
+        }, 300);
     }
 
     closeSearch() {
         this.searchActive = false;
         this.elements.searchWrapper?.classList.remove('active');
+
         if (this.elements.searchInput) {
-            this.elements.searchInput.value = '';
+            this.elements.searchInput.blur();
         }
     }
 
@@ -163,91 +197,12 @@ class MovieDetailsApp {
         window.location.href = `/?q=${encodeURIComponent(query)}`;
     }
 
-    async playTrailer() {
-        if (!this.movieId || !this.movieData) return;
-
-        try {
-            // Show loading state
-            this.elements.trailerTitle.textContent = 'Loading trailer...';
-            this.elements.trailerModal.classList.remove('hidden');
-
-            // Fetch trailer
-            const trailerKey = await this.fetchTrailerKey(this.movieId);
-
-            if (trailerKey) {
-                this.openTrailer(trailerKey, this.movieData.title);
-            } else {
-                this.closeTrailer();
-                this.showTrailerError('Trailer not available for this movie');
-            }
-        } catch (error) {
-            console.error('Error loading trailer:', error);
-            this.closeTrailer();
-            this.showTrailerError('Failed to load trailer');
-        }
-    }
-
-    async fetchTrailerKey(movieId) {
-        try {
-            const response = await this.fetchFromAPI(`movie/${movieId}/videos`);
-            const videos = response?.results || [];
-
-            // Sort videos by preference: Official trailers first, then teasers
-            const sortedVideos = videos.sort((a, b) => {
-                // Prefer official videos
-                if (a.official !== b.official) {
-                    return b.official - a.official;
-                }
-                // Prefer trailers over teasers
-                if (a.type !== b.type) {
-                    if (a.type === 'Trailer' && b.type !== 'Trailer') return -1;
-                    if (b.type === 'Trailer' && a.type !== 'Trailer') return 1;
-                    if (a.type === 'Teaser' && b.type !== 'Teaser') return -1;
-                    if (b.type === 'Teaser' && a.type !== 'Teaser') return 1;
-                }
-                return 0;
-            });
-
-            // Find the best YouTube video
-            const youtubeVideo = sortedVideos.find(video => 
-                video.site === 'YouTube' && 
-                (video.type === 'Trailer' || video.type === 'Teaser')
-            );
-
-            return youtubeVideo?.key || null;
-        } catch (error) {
-            console.error('Error fetching trailer:', error);
-            return null;
-        }
-    }
-
-    openTrailer(youtubeKey, movieTitle) {
-        this.elements.trailerTitle.textContent = `${movieTitle} - Trailer`;
-        this.elements.trailerIframe.src = `https://www.youtube.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1`;
-        this.elements.trailerModal.classList.remove('hidden');
-
-        // Prevent body scroll
-        document.body.style.overflow = 'hidden';
-    }
-
-    closeTrailer() {
-        this.elements.trailerIframe.src = '';
-        this.elements.trailerModal.classList.add('hidden');
-
-        // Re-enable body scroll
-        document.body.style.overflow = '';
-    }
-
-    showTrailerError(message) {
-        alert(message);
-    }
-
     extractMovieId() {
         const urlParams = new URLSearchParams(window.location.search);
         this.movieId = urlParams.get('id');
 
         if (!this.movieId) {
-            this.showError('Movie ID not found in URL');
+            this.showError('Movie ID not found. Go back to home.');
             return false;
         }
 
@@ -263,7 +218,7 @@ class MovieDetailsApp {
         this.showLoading();
 
         try {
-            // Fetch movie details and credits in parallel
+            // Fetch movie details and credits
             const [movieResponse, creditsResponse] = await Promise.all([
                 this.fetchFromAPI(`movie/${this.movieId}`, { language: 'en-US' }),
                 this.fetchFromAPI(`movie/${this.movieId}/credits`, { language: 'en-US' })
@@ -278,7 +233,7 @@ class MovieDetailsApp {
 
         } catch (error) {
             console.error('Error loading movie details:', error);
-            this.showError('Failed to load movie details. Click to retry.');
+            this.showError('Failed to load movie details. Tap to retry.');
         }
     }
 
@@ -301,134 +256,71 @@ class MovieDetailsApp {
     }
 
     renderMovieDetails() {
-        this.renderBasicInfo();
-        this.renderGenres();
-        this.renderRating();
+        this.renderHeroSection();
         this.renderOverview();
-        this.renderCredits();
-        this.renderTechnicalInfo();
-        this.renderHomepage();
+        this.renderMovieInfo();
+        this.renderCast();
+        this.renderCrew();
     }
 
-    renderBasicInfo() {
+    renderHeroSection() {
+        // Backdrop
+        if (this.movieData.backdrop_path && this.elements.heroBackdrop) {
+            this.elements.heroBackdrop.style.backgroundImage = 
+                `linear-gradient(rgba(11, 16, 32, 0.7), rgba(11, 16, 32, 0.9)), url(${this.BACKDROP_BASE}${this.movieData.backdrop_path})`;
+            this.elements.heroBackdrop.style.backgroundSize = 'cover';
+            this.elements.heroBackdrop.style.backgroundPosition = 'center';
+        }
+
         // Poster
-        if (this.movieData.poster_path && this.elements.poster) {
-            this.elements.poster.src = `${this.IMG_BASE}${this.movieData.poster_path}`;
-            this.elements.poster.alt = `${this.movieData.title} poster`;
+        if (this.movieData.poster_path && this.elements.moviePoster) {
+            this.elements.moviePoster.src = `${this.IMG_BASE}${this.movieData.poster_path}`;
+            this.elements.moviePoster.alt = `${this.movieData.title} poster`;
         }
 
         // Title
-        const year = this.movieData.release_date 
-            ? new Date(this.movieData.release_date).getFullYear()
-            : '';
-
-        const titleText = `${this.movieData.title || 'Untitled'}${year ? ` (${year})` : ''}`;
-
-        if (this.elements.title) {
-            this.elements.title.textContent = titleText;
+        if (this.elements.movieTitle) {
+            const year = this.movieData.release_date 
+                ? new Date(this.movieData.release_date).getFullYear()
+                : '';
+            this.elements.movieTitle.textContent = 
+                `${this.movieData.title || 'Untitled'}${year ? ` (${year})` : ''}`;
         }
 
         // Meta information
-        const language = (this.movieData.original_language || '').toUpperCase();
-        const voteCount = this.movieData.vote_count || 0;
-        const metaText = `Language: ${language || 'Unknown'} â€¢ ${voteCount.toLocaleString()} votes`;
-
-        if (this.elements.meta) {
-            this.elements.meta.textContent = metaText;
+        if (this.elements.movieMeta) {
+            const language = (this.movieData.original_language || '').toUpperCase();
+            const voteCount = this.movieData.vote_count || 0;
+            this.elements.movieMeta.textContent = 
+                `${language} â€¢ ${voteCount.toLocaleString()} votes`;
         }
 
-        // Tagline
-        if (this.elements.tagline) {
-            if (this.movieData.tagline) {
-                this.elements.tagline.textContent = `"${this.movieData.tagline}"`;
-                this.elements.tagline.style.display = 'block';
-            } else {
-                this.elements.tagline.style.display = 'none';
-            }
-        }
-    }
-
-    renderGenres() {
-        if (!this.elements.genres || !this.movieData.genres) return;
-
-        const genresHTML = this.movieData.genres
-            .map(genre => `<span class="genre-badge">${this.escapeHtml(genre.name)}</span>`)
-            .join('');
-
-        this.elements.genres.innerHTML = genresHTML;
-    }
-
-    renderRating() {
-        const rating = typeof this.movieData.vote_average === 'number' 
-            ? this.movieData.vote_average.toFixed(1) 
-            : 'N/A';
-
-        // Main rating display
-        if (this.elements.rating) {
-            const stars = this.generateStars(this.movieData.vote_average);
-            this.elements.rating.innerHTML = `
-                <div class="rating-score">
-                    <span class="rating-number">${rating}</span>
-                    <span class="rating-max">/10</span>
-                </div>
-                <div class="rating-stars">${stars}</div>
-            `;
+        // Genres
+        if (this.elements.movieGenres && this.movieData.genres) {
+            const genresHTML = this.movieData.genres
+                .slice(0, 3)
+                .map(genre => `<span class="genre-tag">${this.escapeHtml(genre.name)}</span>`)
+                .join('');
+            this.elements.movieGenres.innerHTML = genresHTML;
         }
 
-        // Rating badge on poster
-        if (this.elements.ratingBadge) {
-            this.elements.ratingBadge.textContent = `â˜… ${rating}`;
+        // Rating
+        if (this.elements.movieRating) {
+            const rating = typeof this.movieData.vote_average === 'number' 
+                ? this.movieData.vote_average.toFixed(1) 
+                : 'N/A';
+            this.elements.movieRating.textContent = rating;
         }
-    }
-
-    generateStars(rating) {
-        if (typeof rating !== 'number') return '';
-
-        const fullStars = Math.floor(rating / 2);
-        const hasHalfStar = (rating % 2) >= 1;
-        const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-
-        return 'â˜…'.repeat(fullStars) + 
-               (hasHalfStar ? 'â˜†' : '') + 
-               'â˜†'.repeat(emptyStars);
     }
 
     renderOverview() {
-        if (this.elements.overview) {
+        if (this.elements.movieOverview) {
             const overview = this.movieData.overview || 'No overview available for this movie.';
-            this.elements.overview.textContent = overview;
+            this.elements.movieOverview.textContent = overview;
         }
     }
 
-    renderCredits() {
-        this.renderDirector();
-        this.renderCast();
-    }
-
-    renderDirector() {
-        if (!this.elements.director) return;
-
-        const director = this.creditsData?.crew?.find(person => person.job === 'Director');
-        this.elements.director.textContent = director ? director.name : 'Not available';
-    }
-
-    renderCast() {
-        if (!this.elements.cast || !this.creditsData?.cast) return;
-
-        const topCast = this.creditsData.cast.slice(0, 8);
-        const castHTML = topCast
-            .map(person => `
-                <div class="cast-item">
-                    <div class="cast-name">${this.escapeHtml(person.name)}</div>
-                    <div class="cast-character">${this.escapeHtml(person.character || 'Unknown role')}</div>
-                </div>
-            `)
-            .join('');
-
-        this.elements.cast.innerHTML = castHTML;
-    }
-
-    renderTechnicalInfo() {
+    renderMovieInfo() {
         const info = {
             status: this.movieData.status || 'Unknown',
             release: this.formatDate(this.movieData.release_date),
@@ -439,31 +331,120 @@ class MovieDetailsApp {
         };
 
         Object.entries(info).forEach(([key, value]) => {
-            const element = this.elements[key];
+            const element = this.elements[`movie${key.charAt(0).toUpperCase() + key.slice(1)}`];
             if (element) {
                 element.textContent = value;
             }
         });
     }
 
-    renderHomepage() {
-        if (!this.movieData.homepage || !this.elements.homepage) {
-            this.elements.homepageSection?.classList.add('hidden');
-            return;
-        }
+    renderCast() {
+        if (!this.elements.movieCast || !this.creditsData?.cast) return;
 
-        this.elements.homepage.href = this.movieData.homepage;
-        this.elements.homepage.textContent = this.movieData.homepage.replace(/^https?:\/\//, '');
-        this.elements.homepageSection?.classList.remove('hidden');
+        const topCast = this.creditsData.cast.slice(0, 6);
+        const castHTML = topCast
+            .map(person => `
+                <div class="cast-item">
+                    <div class="cast-name">${this.escapeHtml(person.name)}</div>
+                    <div class="cast-character">${this.escapeHtml(person.character || 'Unknown role')}</div>
+                </div>
+            `)
+            .join('');
+
+        this.elements.movieCast.innerHTML = castHTML;
+    }
+
+    renderCrew() {
+        if (!this.elements.movieDirector) return;
+
+        const director = this.creditsData?.crew?.find(person => person.job === 'Director');
+        this.elements.movieDirector.textContent = director ? director.name : 'Not available';
+    }
+
+    async playTrailer() {
+        if (!this.movieId || !this.movieData) return;
+
+        try {
+            this.elements.trailerTitle.textContent = 'Loading trailer...';
+            this.elements.trailerModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            const trailerKey = await this.fetchTrailerKey(this.movieId);
+
+            if (trailerKey) {
+                this.openTrailer(trailerKey, this.movieData.title);
+            } else {
+                this.closeTrailer();
+                this.showNotification('Trailer not available for this movie');
+            }
+        } catch (error) {
+            console.error('Error loading trailer:', error);
+            this.closeTrailer();
+            this.showNotification('Failed to load trailer');
+        }
+    }
+
+    async fetchTrailerKey(movieId) {
+        try {
+            const response = await this.fetchFromAPI(`movie/${movieId}/videos`);
+            const videos = response?.results || [];
+
+            const sortedVideos = videos.sort((a, b) => {
+                if (a.official !== b.official) return b.official - a.official;
+                if (a.type !== b.type) {
+                    if (a.type === 'Trailer' && b.type !== 'Trailer') return -1;
+                    if (b.type === 'Trailer' && a.type !== 'Trailer') return 1;
+                }
+                return 0;
+            });
+
+            const youtubeVideo = sortedVideos.find(video => 
+                video.site === 'YouTube' && 
+                (video.type === 'Trailer' || video.type === 'Teaser')
+            );
+
+            return youtubeVideo?.key || null;
+        } catch (error) {
+            console.error('Error fetching trailer:', error);
+            return null;
+        }
+    }
+
+    openTrailer(youtubeKey, movieTitle) {
+        this.elements.trailerTitle.textContent = `${movieTitle} - Trailer`;
+        this.elements.trailerIframe.src = `https://www.youtube.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+        this.elements.trailerModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeTrailer() {
+        this.elements.trailerIframe.src = '';
+        this.elements.trailerModal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    toggleWatchlist() {
+        const isAdded = this.elements.addWatchlistBtn.classList.toggle('added');
+        const icon = this.elements.addWatchlistBtn.querySelector('.btn-icon');
+        const text = this.elements.addWatchlistBtn.querySelector('span:last-child');
+
+        if (isAdded) {
+            icon.textContent = 'âœ“';
+            text.textContent = 'Added';
+            this.showNotification('Added to watchlist');
+        } else {
+            icon.textContent = 'âž•';
+            text.textContent = 'Watchlist';
+            this.showNotification('Removed from watchlist');
+        }
     }
 
     formatDate(dateString) {
         if (!dateString) return 'Not available';
-
         try {
             return new Date(dateString).toLocaleDateString('en-US', {
                 year: 'numeric',
-                month: 'long',
+                month: 'short',
                 day: 'numeric'
             });
         } catch {
@@ -473,19 +454,15 @@ class MovieDetailsApp {
 
     formatRuntime(minutes) {
         if (!minutes || minutes <= 0) return 'Not available';
-
         const hours = Math.floor(minutes / 60);
         const mins = minutes % 60;
-
-        if (hours > 0) {
-            return `${hours}h ${mins}m`;
-        }
-        return `${mins}m`;
+        return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
     }
 
     formatCurrency(amount) {
         if (!amount || amount <= 0) return 'Not disclosed';
-
+        if (amount >= 1000000000) return `$${(amount / 1000000000).toFixed(1)}B`;
+        if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
@@ -495,7 +472,7 @@ class MovieDetailsApp {
 
     updatePageTitle() {
         const title = this.movieData?.title || 'Movie';
-        document.title = `${title} - FilmyFeed Professional`;
+        document.title = `${title} - FilmyFeed Mobile`;
     }
 
     showLoading() {
@@ -507,9 +484,7 @@ class MovieDetailsApp {
         this.hideAllStatus();
         if (this.elements.errorEl) {
             const textEl = this.elements.errorEl.querySelector('.status-text');
-            if (textEl) {
-                textEl.textContent = message;
-            }
+            if (textEl) textEl.textContent = message;
             this.elements.errorEl.classList.remove('hidden');
         }
     }
@@ -525,6 +500,23 @@ class MovieDetailsApp {
         this.elements.movieDetail?.classList.add('hidden');
     }
 
+    showNotification(message) {
+        const notification = document.createElement('div');
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.9); color: white; padding: 12px 20px;
+            border-radius: 8px; z-index: 3000; font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 2500);
+    }
+
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text || '';
@@ -532,7 +524,7 @@ class MovieDetailsApp {
     }
 }
 
-// Initialize app when DOM is ready
+// Initialize movie details app
 document.addEventListener('DOMContentLoaded', () => {
-    window.movieDetailsApp = new MovieDetailsApp();
+    window.movieDetailsMobile = new MovieDetailsMobile();
 });
