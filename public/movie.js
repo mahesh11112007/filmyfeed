@@ -1,6 +1,6 @@
 /**
- * FilmyFeed Professional - Movie Details Controller
- * Features: Complete movie information, collapsible search
+ * FilmyFeed Professional - Movie Details with YouTube Trailers
+ * Features: Complete movie information, trailer playback, collapsible search
  */
 
 class MovieDetailsApp {
@@ -28,6 +28,7 @@ class MovieDetailsApp {
             rating: document.getElementById('detail-rating'),
             ratingBadge: document.getElementById('detail-rating-badge'),
             overview: document.getElementById('detail-overview'),
+            watchTrailerBtn: document.getElementById('watch-trailer-btn'),
 
             // Details elements
             director: document.getElementById('detail-director'),
@@ -46,7 +47,13 @@ class MovieDetailsApp {
             searchWrapper: document.getElementById('search-wrapper'),
             searchInput: document.getElementById('search-input'),
             searchBtn: document.getElementById('search-btn'),
-            searchClose: document.getElementById('search-close')
+            searchClose: document.getElementById('search-close'),
+
+            // Trailer modal elements
+            trailerModal: document.getElementById('trailer-modal'),
+            trailerClose: document.getElementById('trailer-close'),
+            trailerIframe: document.getElementById('trailer-iframe'),
+            trailerTitle: document.getElementById('trailer-title')
         };
 
         this.init();
@@ -79,6 +86,11 @@ class MovieDetailsApp {
             }
         });
 
+        // Watch trailer button
+        this.elements.watchTrailerBtn?.addEventListener('click', () => {
+            this.playTrailer();
+        });
+
         // Error retry
         this.elements.errorEl?.addEventListener('click', () => {
             this.loadMovieDetails();
@@ -93,10 +105,25 @@ class MovieDetailsApp {
             }
         });
 
-        // Close search on escape
+        // Close search/trailer on escape
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.searchActive) {
-                this.closeSearch();
+            if (e.key === 'Escape') {
+                if (this.searchActive) {
+                    this.closeSearch();
+                } else if (!this.elements.trailerModal.classList.contains('hidden')) {
+                    this.closeTrailer();
+                }
+            }
+        });
+
+        // Trailer modal events
+        this.elements.trailerClose?.addEventListener('click', () => {
+            this.closeTrailer();
+        });
+
+        this.elements.trailerModal?.addEventListener('click', (e) => {
+            if (e.target === this.elements.trailerModal) {
+                this.closeTrailer();
             }
         });
     }
@@ -134,6 +161,85 @@ class MovieDetailsApp {
         }
 
         window.location.href = `/?q=${encodeURIComponent(query)}`;
+    }
+
+    async playTrailer() {
+        if (!this.movieId || !this.movieData) return;
+
+        try {
+            // Show loading state
+            this.elements.trailerTitle.textContent = 'Loading trailer...';
+            this.elements.trailerModal.classList.remove('hidden');
+
+            // Fetch trailer
+            const trailerKey = await this.fetchTrailerKey(this.movieId);
+
+            if (trailerKey) {
+                this.openTrailer(trailerKey, this.movieData.title);
+            } else {
+                this.closeTrailer();
+                this.showTrailerError('Trailer not available for this movie');
+            }
+        } catch (error) {
+            console.error('Error loading trailer:', error);
+            this.closeTrailer();
+            this.showTrailerError('Failed to load trailer');
+        }
+    }
+
+    async fetchTrailerKey(movieId) {
+        try {
+            const response = await this.fetchFromAPI(`movie/${movieId}/videos`);
+            const videos = response?.results || [];
+
+            // Sort videos by preference: Official trailers first, then teasers
+            const sortedVideos = videos.sort((a, b) => {
+                // Prefer official videos
+                if (a.official !== b.official) {
+                    return b.official - a.official;
+                }
+                // Prefer trailers over teasers
+                if (a.type !== b.type) {
+                    if (a.type === 'Trailer' && b.type !== 'Trailer') return -1;
+                    if (b.type === 'Trailer' && a.type !== 'Trailer') return 1;
+                    if (a.type === 'Teaser' && b.type !== 'Teaser') return -1;
+                    if (b.type === 'Teaser' && a.type !== 'Teaser') return 1;
+                }
+                return 0;
+            });
+
+            // Find the best YouTube video
+            const youtubeVideo = sortedVideos.find(video => 
+                video.site === 'YouTube' && 
+                (video.type === 'Trailer' || video.type === 'Teaser')
+            );
+
+            return youtubeVideo?.key || null;
+        } catch (error) {
+            console.error('Error fetching trailer:', error);
+            return null;
+        }
+    }
+
+    openTrailer(youtubeKey, movieTitle) {
+        this.elements.trailerTitle.textContent = `${movieTitle} - Trailer`;
+        this.elements.trailerIframe.src = `https://www.youtube.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1`;
+        this.elements.trailerModal.classList.remove('hidden');
+
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeTrailer() {
+        this.elements.trailerIframe.src = '';
+        this.elements.trailerModal.classList.add('hidden');
+
+        // Re-enable body scroll
+        document.body.style.overflow = '';
+    }
+
+    showTrailerError(message) {
+        alert(message);
     }
 
     extractMovieId() {
