@@ -17,7 +17,7 @@ app.get('/health', (req, res) => {
     });
 });
 
-// API proxy to TMDb - Fixed syntax
+// API proxy to TMDb - FIXED syntax error
 app.get('/api/*', async (req, res) => {
     const TMDB_API_KEY = process.env.TMDB_API_KEY;
     const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -28,7 +28,7 @@ app.get('/api/*', async (req, res) => {
         });
     }
 
-    const endpoint = req.params[0];
+    const endpoint = req.params[0]; // wildcard after /api/
     const url = `${TMDB_BASE_URL}/${endpoint}`;
 
     try {
