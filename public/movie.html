@@ -1,0 +1,178 @@
+
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <meta name="description" content="Detailed movie information including plot, cast, director, and ratings on FilmyFeed.">
+
+    <title>Movie Details - FilmyFeed Professional</title>
+
+    <!-- Preload resources -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style">
+
+    <!-- Stylesheets -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/logo.svg">
+
+    <script>document.documentElement.classList.remove('no-js')</script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="app-header" role="banner">
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="brand" aria-label="FilmyFeed Home">
+                    <img src="logo.svg" alt="" class="brand-logo" width="36" height="36">
+                    <span class="brand-name">FilmyFeed</span>
+                    <span class="brand-tagline">Professional</span>
+                </a>
+
+                <div class="header-actions">
+                    <form class="search-form" role="search">
+                        <div class="search-wrapper">
+                            <input 
+                                type="search" 
+                                id="search-input" 
+                                class="search-input"
+                                placeholder="Search movies..." 
+                                autocomplete="off"
+                            >
+                            <button type="submit" id="search-btn" class="search-btn">
+                                <span class="search-icon">🔍</span>
+                                <span class="search-text">Search</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <a href="/" class="btn btn-secondary" aria-label="Back to home">
+                        ← Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content" role="main">
+        <div class="container">
+            <!-- Loading State -->
+            <div id="detail-loading" class="status-card loading-card" role="status">
+                <div class="loading-spinner"></div>
+                <p class="status-text">Loading movie details...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="detail-error" class="status-card error-card hidden" role="alert">
+                <div class="error-icon">⚠️</div>
+                <p class="status-text">Failed to load movie details.</p>
+            </div>
+
+            <!-- Movie Details -->
+            <article id="movie-detail" class="movie-detail hidden">
+                <!-- Hero Section -->
+                <section class="detail-hero">
+                    <div class="poster-container">
+                        <img id="detail-poster" class="detail-poster" alt="Movie Poster">
+                        <div class="poster-overlay">
+                            <div id="detail-rating-badge" class="rating-badge"></div>
+                        </div>
+                    </div>
+
+                    <div class="hero-content">
+                        <header class="movie-header">
+                            <h1 id="detail-title" class="movie-title"></h1>
+                            <div id="detail-meta" class="movie-meta"></div>
+                            <div id="detail-genres" class="genres-container"></div>
+                            <blockquote id="detail-tagline" class="movie-tagline"></blockquote>
+                        </header>
+
+                        <div class="rating-section">
+                            <div id="detail-rating" class="rating-display"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Details Grid -->
+                <div class="details-grid">
+                    <!-- Overview -->
+                    <section class="detail-section overview-section">
+                        <h2 class="section-title">Plot Overview</h2>
+                        <p id="detail-overview" class="overview-text"></p>
+                    </section>
+
+                    <!-- Movie Info -->
+                    <section class="detail-section info-section">
+                        <h2 class="section-title">Movie Information</h2>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Director</span>
+                                <span id="detail-director" class="info-value"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Status</span>
+                                <span id="detail-status" class="info-value"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Release Date</span>
+                                <span id="detail-release" class="info-value"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Runtime</span>
+                                <span id="detail-runtime" class="info-value"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Language</span>
+                                <span id="detail-language" class="info-value"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Budget</span>
+                                <span id="detail-budget" class="info-value"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Revenue</span>
+                                <span id="detail-revenue" class="info-value"></span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Cast -->
+                    <section class="detail-section cast-section">
+                        <h2 class="section-title">Main Cast</h2>
+                        <div id="detail-cast" class="cast-grid"></div>
+                    </section>
+
+                    <!-- Homepage -->
+                    <section id="homepage-section" class="detail-section homepage-section hidden">
+                        <h2 class="section-title">Official Website</h2>
+                        <a id="detail-homepage" class="homepage-link" target="_blank" rel="noopener noreferrer"></a>
+                    </section>
+                </div>
+            </article>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="logo.svg" alt="" class="footer-logo" width="24" height="24">
+                    <span class="footer-text">FilmyFeed Professional</span>
+                </div>
+                <div class="footer-links">
+                    <span class="footer-text">Powered by TMDb</span>
+                    <span class="footer-separator">•</span>
+                    <span class="footer-text">© 2025 FilmyFeed</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="movie.js"></script>
+</body>
+</html>
