@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FimlyFeed</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logo" aria-label="FimlyFeed">
+        <img src="logo.png" alt="FimlyFeed Logo" />
+        <h1>Fimly Feed</h1>
+      </div>
+
+      <div class="search-container">
+        <input type="text" id="search-input" placeholder="Search movies..." aria-label="Search movies" />
+        <button id="search-btn" aria-label="Search">Search</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <h2 id="page-title">Now Playing</h2>
+    <div id="movies-grid" class="movies-grid"></div>
+
+    <div id="loading" class="loading hidden" role="status" aria-live="polite">Loading...</div>
+    <div id="error" class="error hidden" role="alert"></div>
+    <div id="no-results" class="no-results hidden">No movies found.</div>
+  </main>
+
+  <!-- Movie Detail Modal -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-content">
+      <button class="close" aria-label="Close modal">&times;</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>This Website is Created By <b>Mahesh Vilasagaramb</b> With <b>TMDb</b> Database</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
