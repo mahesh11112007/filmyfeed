@@ -1,7 +1,7 @@
 {
   "name": "fimlyfeed",
   "version": "1.0.0",
-  "description": "A movie discovery app using TMDb API",
+  "description": "A movie discovery website By Mahesh Vilasagaram using TMDb Database",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
