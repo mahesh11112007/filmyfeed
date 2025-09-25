@@ -104,6 +104,64 @@ async function showMovieDetail(movieId) {
     modal.classList.remove('hidden');
 }
 
+// Handle search with URL navigation
+function handleSearch() {
+    const query = searchInput.value.trim();
+    if (!query) {
+        // Clear search and go back to home
+        window.history.pushState({}, '', window.location.pathname);
+        loadLatestReleased();
+        return;
+    }
+    // Navigate to search results page
+    window.location.href = `${window.location.pathname}?q=${encodeURIComponent(query)}`;
+}
+
+// Initialize from URL parameters
+function initFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q')?.trim();
+
+    if (q) {
+        // Load search results
+        currentQuery = q;
+        isSearching = true;
+        currentPage = 1;
+        searchInput.value = q;
+        pageTitle.textContent = `Search Results for "${q}"`;
+        loadSearchResults();
+    } else {
+        // Load latest released movies (default)
+        loadLatestReleased();
+    }
+}
+
+// Load latest released movies (using now_playing endpoint)
+function loadLatestReleased() {
+    isSearching = false;
+    currentQuery = '';
+    searchInput.value = '';
+    pageTitle.textContent = 'Latest Released Movies';
+    fetchAndRenderLatestReleased();
+}
+
+async function fetchAndRenderLatestReleased() {
+    const page1 = await fetchMovies('movie/now_playing', { page: 1, language: 'en-US', region: 'IN' });
+    const page2 = await fetchMovies('movie/now_playing', { page: 2, language: 'en-US', region: 'IN' });
+    const allMovies = [...(page1?.results || []), ...(page2?.results || [])];
+    renderMovies(allMovies);
+}
+
+async function loadSearchResults() {
+    const data = await fetchMovies('search/movie', { 
+        query: currentQuery, 
+        page: currentPage, 
+        include_adult: false, 
+        language: 'en-US' 
+    });
+    renderMovies(data?.results || []);
+}
+
 // Event Listeners
 moviesGrid.addEventListener('click', (e) => {
     const card = e.target.closest('.movie-card');
@@ -120,43 +178,14 @@ modal.addEventListener('click', (e) => {
     }
 });
 
+// Search event listeners
 searchBtn.addEventListener('click', handleSearch);
 searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleSearch();
 });
 
-function handleSearch() {
-    const query = searchInput.value.trim();
-    if (!query) {
-        loadNowPlaying();
-        return;
-    }
-
-    currentQuery = query;
-    isSearching = true;
-    currentPage = 1;
-    loadSearchResults();
-}
-
-// Loaders
-function loadNowPlaying() {
-    isSearching = false;
-    pageTitle.textContent = 'Latest Movies Released';
-    fetchAndRenderNowPlaying();
-}
-
-async function fetchAndRenderNowPlaying() {
-    const page1 = await fetchMovies('movie/now_playing', { page: 1, language: 'en-US', region: 'IN' });
-    const page2 = await fetchMovies('movie/now_playing', { page: 2, language: 'en-US', region: 'IN' });
-    const allMovies = [...(page1?.results || []), ...(page2?.results || [])];
-    renderMovies(allMovies);
-}
-
-async function loadSearchResults() {
-    pageTitle.textContent = `Search Results for "${currentQuery}"`;
-    const data = await fetchMovies('search/movie', { query: currentQuery, page: currentPage, include_adult: false, language: 'en-US' });
-    renderMovies(data?.results || []);
-}
+// Handle browser back/forward
+window.addEventListener('popstate', initFromURL);
 
 // UI Helpers
 function showLoading() {
@@ -185,5 +214,5 @@ function escapeHtml(str) {
         .replaceAll("'", '&#x27;');
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', loadNowPlaying);
+// Initialize app when DOM is loaded
+document.addEventListener('DOMContentLoaded', initFromURL);
