@@ -1,218 +1,393 @@
-// DOM Elements
-const moviesGrid = document.getElementById('movies-grid');
-const searchInput = document.getElementById('search-input');
-const searchBtn = document.getElementById('search-btn');
-const pageTitle = document.getElementById('page-title');
-const loadingEl = document.getElementById('loading');
-const errorEl = document.getElementById('error');
-const noResultsEl = document.getElementById('no-results');
-const modal = document.getElementById('modal');
-const modalBody = document.getElementById('modal-body');
-const closeModalBtn = document.querySelector('.close');
+/**
+ * FilmyFeed Professional - Home Page Controller
+ * Handles movie discovery, search, and navigation
+ */
 
-// State
-let currentPage = 1;
-let isSearching = false;
-let currentQuery = '';
-const IMG_BASE = 'https://image.tmdb.org/t/p/w500';
+class FilmyFeedApp {
+    constructor() {
+        this.API_BASE = '/api';
+        this.IMG_BASE = 'https://image.tmdb.org/t/p/w500';
+        this.currentQuery = '';
+        this.isLoading = false;
+        this.cache = new Map();
 
-// Fetch movies via local proxy
-async function fetchMovies(endpoint, params = {}) {
-    const url = new URL(`/api/${endpoint}`, window.location.origin);
-    Object.keys(params).forEach((key) => {
-        if (params[key] !== undefined && params[key] !== null) {
-            url.searchParams.append(key, params[key]);
+        // DOM elements
+        this.elements = {
+            moviesGrid: document.getElementById('movies-grid'),
+            searchInput: document.getElementById('search-input'),
+            searchBtn: document.getElementById('search-btn'),
+            searchForm: document.querySelector('.search-form'),
+            pageTitle: document.getElementById('page-title'),
+            pageSubtitle: document.querySelector('.page-subtitle'),
+            loadingEl: document.getElementById('loading'),
+            errorEl: document.getElementById('error'),
+            noResultsEl: document.getElementById('no-results')
+        };
+
+        this.init();
+    }
+
+    init() {
+        this.setupEventListeners();
+        this.handleInitialLoad();
+        this.preloadCriticalResources();
+    }
+
+    setupEventListeners() {
+        // Search form submission
+        this.elements.searchForm?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleSearch();
+        });
+
+        // Search button click
+        this.elements.searchBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.handleSearch();
+        });
+
+        // Search input enter key
+        this.elements.searchInput?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.handleSearch();
+            }
+        });
+
+        // Movie card clicks
+        this.elements.moviesGrid?.addEventListener('click', (e) => {
+            const card = e.target.closest('.movie-card');
+            if (card && !this.isLoading) {
+                this.handleMovieClick(card);
+            }
+        });
+
+        // Browser navigation
+        window.addEventListener('popstate', () => {
+            this.handleBrowserNavigation();
+        });
+
+        // Error retry
+        this.elements.errorEl?.addEventListener('click', () => {
+            this.retry();
+        });
+    }
+
+    handleInitialLoad() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const query = urlParams.get('q')?.trim();
+
+        if (query) {
+            this.currentQuery = query;
+            this.elements.searchInput.value = query;
+            this.loadSearchResults(query);
+        } else {
+            this.loadLatestMovies();
         }
-    });
-
-    try {
-        showLoading();
-        const res = await fetch(url.toString());
-        if (!res.ok) throw new Error('Network response was not ok');
-        const data = await res.json();
-        return data;
-    } catch (err) {
-        showError('Failed to fetch movies. Please try again later.');
-        return null;
-    } finally {
-        hideLoading();
-    }
-}
-
-// Render movies grid
-function renderMovies(movies) {
-    if (!movies || movies.length === 0) {
-        noResultsEl.classList.remove('hidden');
-        moviesGrid.innerHTML = '';
-        return;
     }
 
-    noResultsEl.classList.add('hidden');
-    moviesGrid.innerHTML = movies
-        .map((movie) => {
-            const posterPath = movie.poster_path ? `${IMG_BASE}${movie.poster_path}` : '';
-            const title = movie.title || 'Untitled';
-            const date = movie.release_date || 'N/A';
-            const rating = typeof movie.vote_average === 'number' ? movie.vote_average.toFixed(1) : 'N/A';
-            const votes = typeof movie.vote_count === 'number' ? movie.vote_count : 0;
+    async handleSearch() {
+        const query = this.elements.searchInput.value.trim();
 
-            return `
-                <div class="movie-card" data-id="${movie.id}">
-                    ${posterPath ? 
-                        `<img class="movie-poster" src="${posterPath}" alt="${escapeHtml(title)}" />` :
-                        '<div class="movie-poster" style="background: #333; display: flex; align-items: center; justify-content: center; color: #999;">No poster available</div>'
+        if (!query) {
+            this.navigateToHome();
+            return;
+        }
+
+        if (query === this.currentQuery) {
+            return; // Avoid duplicate searches
+        }
+
+        // Update URL without page reload
+        const newUrl = `${window.location.pathname}?q=${encodeURIComponent(query)}`;
+        window.history.pushState({ query }, '', newUrl);
+
+        this.currentQuery = query;
+        await this.loadSearchResults(query);
+    }
+
+    navigateToHome() {
+        window.history.pushState({}, '', window.location.pathname);
+        this.currentQuery = '';
+        this.elements.searchInput.value = '';
+        this.loadLatestMovies();
+    }
+
+    handleBrowserNavigation() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const query = urlParams.get('q')?.trim();
+
+        if (query) {
+            this.currentQuery = query;
+            this.elements.searchInput.value = query;
+            this.loadSearchResults(query);
+        } else {
+            this.currentQuery = '';
+            this.elements.searchInput.value = '';
+            this.loadLatestMovies();
+        }
+    }
+
+    handleMovieClick(card) {
+        const movieId = card.dataset.id;
+        if (movieId) {
+            // Add loading state to clicked card
+            card.style.opacity = '0.7';
+            card.style.pointerEvents = 'none';
+
+            // Navigate to movie details
+            window.location.href = `/movie.html?id=${encodeURIComponent(movieId)}`;
+        }
+    }
+
+    async loadLatestMovies() {
+        this.updatePageHeader('Latest Released Movies', 'Discover the newest releases in theaters worldwide');
+        await this.fetchAndRenderMovies('latest');
+    }
+
+    async loadSearchResults(query) {
+        this.updatePageHeader(
+            `Search Results for "${query}"`,
+            `Found movies matching your search for "${query}"`
+        );
+        await this.fetchAndRenderMovies('search', { query });
+    }
+
+    async fetchAndRenderMovies(type, options = {}) {
+        if (this.isLoading) return;
+
+        this.showLoading();
+
+        try {
+            let movies = [];
+
+            if (type === 'latest') {
+                movies = await this.fetchLatestMovies();
+            } else if (type === 'search') {
+                movies = await this.fetchSearchMovies(options.query);
+            }
+
+            this.renderMovies(movies);
+            this.hideLoading();
+
+        } catch (error) {
+            console.error('Error fetching movies:', error);
+            this.showError('Failed to load movies. Click to retry.');
+        }
+    }
+
+    async fetchLatestMovies() {
+        const cacheKey = 'latest_movies';
+
+        if (this.cache.has(cacheKey)) {
+            const cached = this.cache.get(cacheKey);
+            if (Date.now() - cached.timestamp < 300000) { // 5 minutes cache
+                return cached.data;
+            }
+        }
+
+        const [page1, page2] = await Promise.all([
+            this.fetchFromAPI('movie/now_playing', { 
+                page: 1, 
+                language: 'en-US', 
+                region: 'IN' 
+            }),
+            this.fetchFromAPI('movie/now_playing', { 
+                page: 2, 
+                language: 'en-US', 
+                region: 'IN' 
+            })
+        ]);
+
+        const movies = [
+            ...(page1?.results || []),
+            ...(page2?.results || [])
+        ];
+
+        // Cache the results
+        this.cache.set(cacheKey, {
+            data: movies,
+            timestamp: Date.now()
+        });
+
+        return movies;
+    }
+
+    async fetchSearchMovies(query) {
+        const data = await this.fetchFromAPI('search/movie', {
+            query: query,
+            include_adult: false,
+            language: 'en-US',
+            page: 1
+        });
+
+        return data?.results || [];
+    }
+
+    async fetchFromAPI(endpoint, params = {}) {
+        const url = new URL(`${this.API_BASE}/${endpoint}`, window.location.origin);
+
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+                url.searchParams.append(key, value);
+            }
+        });
+
+        const response = await fetch(url.toString(), {
+            headers: {
+                'Accept': 'application/json',
+            },
+            cache: 'default'
+        });
+
+        if (!response.ok) {
+            throw new Error(`API request failed: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    renderMovies(movies) {
+        if (!Array.isArray(movies) || movies.length === 0) {
+            this.showNoResults();
+            return;
+        }
+
+        const moviesHTML = movies.map(movie => this.createMovieCard(movie)).join('');
+        this.elements.moviesGrid.innerHTML = moviesHTML;
+
+        // Animate cards in
+        this.animateCards();
+
+        this.hideAllStatus();
+    }
+
+    createMovieCard(movie) {
+        const posterUrl = movie.poster_path 
+            ? `${this.IMG_BASE}${movie.poster_path}` 
+            : null;
+
+        const title = this.escapeHtml(movie.title || 'Untitled');
+        const year = movie.release_date 
+            ? new Date(movie.release_date).getFullYear() 
+            : 'TBA';
+
+        const rating = typeof movie.vote_average === 'number' 
+            ? movie.vote_average.toFixed(1) 
+            : 'N/A';
+
+        return `
+            <article class="movie-card" data-id="${movie.id}" tabindex="0" role="button" aria-label="View details for ${title}">
+                <div class="poster-container">
+                    ${posterUrl 
+                        ? `<img class="movie-poster" src="${posterUrl}" alt="${title} poster" loading="lazy">` 
+                        : `<div class="movie-poster" aria-label="No poster available"></div>`
                     }
-                    <div class="movie-info">
-                        <h3 class="movie-title">${escapeHtml(title)}</h3>
-                        <p class="movie-date">${escapeHtml(date)}</p>
-                        <p class="movie-rating">â­ ${rating} (${votes})</p>
+                </div>
+                <div class="movie-info">
+                    <h3 class="movie-title" title="${title}">${title}</h3>
+                    <div class="movie-meta">
+                        <span class="badge">
+                            <span class="year">${year}</span>
+                        </span>
+                        <span class="badge">
+                            <span class="rating">â˜… ${rating}</span>
+                        </span>
                     </div>
                 </div>
-            `;
-        })
-        .join('');
-}
-
-// Show movie details in modal
-async function showMovieDetail(movieId) {
-    if (!movieId) return;
-
-    const data = await fetchMovies(`movie/${movieId}`);
-    if (!data) return;
-
-    const posterPath = data.poster_path ? `${IMG_BASE}${data.poster_path}` : '';
-    const poster = posterPath ? 
-        `<img src="${posterPath}" alt="${escapeHtml(data.title)}" />` :
-        '<div style="width: 100%; height: 300px; background: #333; display: flex; align-items: center; justify-content: center; color: #999; border-radius: 8px;">No poster available</div>';
-
-    const title = data.title || 'Untitled';
-    const date = data.release_date || 'N/A';
-    const rating = typeof data.vote_average === 'number' ? data.vote_average.toFixed(1) : 'N/A';
-    const votes = typeof data.vote_count === 'number' ? data.vote_count : 0;
-    const lang = (data.original_language || 'NA').toUpperCase();
-    const overview = data.overview || 'No overview available.';
-
-    modalBody.innerHTML = `
-        <h2>${escapeHtml(title)}</h2>
-        ${poster}
-        <p><strong>Release Date</strong>: ${escapeHtml(date)}</p>
-        <p><strong>Rating</strong>: ${rating} (${votes} votes)</p>
-        <p><strong>Language</strong>: ${escapeHtml(lang)}</p>
-        <p><strong>Overview</strong>: ${escapeHtml(overview)}</p>
-    `;
-
-    modal.classList.remove('hidden');
-}
-
-// Handle search with URL navigation
-function handleSearch() {
-    const query = searchInput.value.trim();
-    if (!query) {
-        // Clear search and go back to home
-        window.history.pushState({}, '', window.location.pathname);
-        loadLatestReleased();
-        return;
+            </article>
+        `;
     }
-    // Navigate to search results page
-    window.location.href = `${window.location.pathname}?q=${encodeURIComponent(query)}`;
-}
 
-// Initialize from URL parameters
-function initFromURL() {
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get('q')?.trim();
+    animateCards() {
+        const cards = this.elements.moviesGrid.querySelectorAll('.movie-card');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
 
-    if (q) {
-        // Load search results
-        currentQuery = q;
-        isSearching = true;
-        currentPage = 1;
-        searchInput.value = q;
-        pageTitle.textContent = `Search Results for "${q}"`;
-        loadSearchResults();
-    } else {
-        // Load latest released movies (default)
-        loadLatestReleased();
+            setTimeout(() => {
+                card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 50);
+        });
+    }
+
+    updatePageHeader(title, subtitle) {
+        if (this.elements.pageTitle) {
+            this.elements.pageTitle.textContent = title;
+        }
+
+        if (this.elements.pageSubtitle) {
+            this.elements.pageSubtitle.textContent = subtitle;
+        }
+    }
+
+    showLoading() {
+        this.isLoading = true;
+        this.hideAllStatus();
+        this.elements.loadingEl?.classList.remove('hidden');
+        this.elements.moviesGrid.innerHTML = '';
+    }
+
+    hideLoading() {
+        this.isLoading = false;
+        this.elements.loadingEl?.classList.add('hidden');
+    }
+
+    showError(message) {
+        this.isLoading = false;
+        this.hideAllStatus();
+        if (this.elements.errorEl) {
+            this.elements.errorEl.querySelector('.status-text').textContent = message;
+            this.elements.errorEl.classList.remove('hidden');
+        }
+        this.elements.moviesGrid.innerHTML = '';
+    }
+
+    showNoResults() {
+        this.hideAllStatus();
+        this.elements.noResultsEl?.classList.remove('hidden');
+        this.elements.moviesGrid.innerHTML = '';
+    }
+
+    hideAllStatus() {
+        this.elements.loadingEl?.classList.add('hidden');
+        this.elements.errorEl?.classList.add('hidden');
+        this.elements.noResultsEl?.classList.add('hidden');
+    }
+
+    retry() {
+        if (this.currentQuery) {
+            this.loadSearchResults(this.currentQuery);
+        } else {
+            this.loadLatestMovies();
+        }
+    }
+
+    preloadCriticalResources() {
+        // Preload common movie poster sizes
+        const link = document.createElement('link');
+        link.rel = 'dns-prefetch';
+        link.href = 'https://image.tmdb.org';
+        document.head.appendChild(link);
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 
-// Load latest released movies (using now_playing endpoint)
-function loadLatestReleased() {
-    isSearching = false;
-    currentQuery = '';
-    searchInput.value = '';
-    pageTitle.textContent = 'Latest Released Movies';
-    fetchAndRenderLatestReleased();
-}
+// Initialize app when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    window.filmyFeedApp = new FilmyFeedApp();
+});
 
-async function fetchAndRenderLatestReleased() {
-    const page1 = await fetchMovies('movie/now_playing', { page: 1, language: 'en-US', region: 'IN' });
-    const page2 = await fetchMovies('movie/now_playing', { page: 2, language: 'en-US', region: 'IN' });
-    const allMovies = [...(page1?.results || []), ...(page2?.results || [])];
-    renderMovies(allMovies);
-}
-
-async function loadSearchResults() {
-    const data = await fetchMovies('search/movie', { 
-        query: currentQuery, 
-        page: currentPage, 
-        include_adult: false, 
-        language: 'en-US' 
+// Handle service worker registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        // navigator.serviceWorker.register('/sw.js').catch(() => {});
     });
-    renderMovies(data?.results || []);
 }
-
-// Event Listeners
-moviesGrid.addEventListener('click', (e) => {
-    const card = e.target.closest('.movie-card');
-    if (card) showMovieDetail(card.dataset.id);
-});
-
-closeModalBtn.addEventListener('click', () => {
-    modal.classList.add('hidden');
-});
-
-modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-        modal.classList.add('hidden');
-    }
-});
-
-// Search event listeners
-searchBtn.addEventListener('click', handleSearch);
-searchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleSearch();
-});
-
-// Handle browser back/forward
-window.addEventListener('popstate', initFromURL);
-
-// UI Helpers
-function showLoading() {
-    loadingEl.classList.remove('hidden');
-    errorEl.classList.add('hidden');
-    noResultsEl.classList.add('hidden');
-}
-
-function hideLoading() {
-    loadingEl.classList.add('hidden');
-}
-
-function showError(message) {
-    errorEl.textContent = message;
-    errorEl.classList.remove('hidden');
-    loadingEl.classList.add('hidden');
-    noResultsEl.classList.add('hidden');
-}
-
-function escapeHtml(str) {
-    return String(str)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#x27;');
-}
-
-// Initialize app when DOM is loaded
-document.addEventListener('DOMContentLoaded', initFromURL);
