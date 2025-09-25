@@ -1,73 +1,60 @@
 
 <!DOCTYPE html>
-<html lang="en" class="no-js">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b1020">
-    <meta name="description" content="Detailed movie information including plot, cast, director, and ratings on FilmyFeed.">
-
     <title>Movie Details - FilmyFeed</title>
 
-    <!-- Preload resources -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style">
-
-    <!-- Stylesheets -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/logo.png">
-
-    <script>document.documentElement.classList.remove('no-js')</script>
+    <link rel="icon" type="image/png" href="logo.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="app-header" role="banner">
+    <header class="app-header">
         <div class="container">
             <div class="header-content">
-                <a href="/" class="brand" aria-label="FilmyFeed Home">
-                    <img src="logo.png" alt="" class="brand-logo" width="36" height="36">
-                    <span class="brand-name">FilmyFeed</span>
-                    <span class="brand-tagline">Professional</span>
+                <a href="/" class="brand">
+                    <div class="logo-container">
+                        <img src="logo.png" alt="FilmyFeed Logo" class="brand-logo">
+                        <div class="disco-border"></div>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-name">FilmyFeed</span>
+                        <span class="brand-tagline">Professional</span>
+                    </div>
                 </a>
 
                 <div class="header-actions">
-                    <form class="search-form" role="search">
-                        <div class="search-wrapper">
-                            <input 
-                                type="search" 
-                                id="search-input" 
-                                class="search-input"
-                                placeholder="Search movies..." 
-                                autocomplete="off"
-                            >
-                            <button type="submit" id="search-btn" class="search-btn">
-                                <span class="search-icon">🔍</span>
-                                <span class="search-text">Search</span>
-                            </button>
+                    <div class="search-container">
+                        <button class="search-toggle" id="search-toggle">
+                            <span class="search-icon">🔍</span>
+                        </button>
+                        <div class="search-wrapper" id="search-wrapper">
+                            <input type="search" id="search-input" class="search-input" placeholder="Search movies...">
+                            <button type="button" id="search-btn" class="search-btn">Search</button>
+                            <button type="button" class="search-close" id="search-close">✕</button>
                         </div>
-                    </form>
-
-                    <a href="/" class="btn btn-secondary" aria-label="Back to home">
-                        ← Home
-                    </a>
+                    </div>
+                    <a href="/" class="btn btn-secondary">← Home</a>
                 </div>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="main-content" role="main">
+    <main class="main-content">
         <div class="container">
             <!-- Loading State -->
-            <div id="detail-loading" class="status-card loading-card" role="status">
+            <div id="detail-loading" class="status-card loading-card">
                 <div class="loading-spinner"></div>
                 <p class="status-text">Loading movie details...</p>
             </div>
 
             <!-- Error State -->
-            <div id="detail-error" class="status-card error-card hidden" role="alert">
+            <div id="detail-error" class="status-card error-card hidden">
                 <div class="error-icon">⚠️</div>
                 <p class="status-text">Failed to load movie details.</p>
             </div>
@@ -78,35 +65,28 @@
                 <section class="detail-hero">
                     <div class="poster-container">
                         <img id="detail-poster" class="detail-poster" alt="Movie Poster">
-                        <div class="poster-overlay">
-                            <div id="detail-rating-badge" class="rating-badge"></div>
-                        </div>
+                        <div class="rating-badge" id="detail-rating-badge"></div>
                     </div>
 
                     <div class="hero-content">
-                        <header class="movie-header">
-                            <h1 id="detail-title" class="movie-title"></h1>
-                            <div id="detail-meta" class="movie-meta"></div>
-                            <div id="detail-genres" class="genres-container"></div>
-                            <blockquote id="detail-tagline" class="movie-tagline"></blockquote>
-                        </header>
-
-                        <div class="rating-section">
-                            <div id="detail-rating" class="rating-display"></div>
-                        </div>
+                        <h1 id="detail-title" class="movie-title"></h1>
+                        <div id="detail-meta" class="movie-meta"></div>
+                        <div id="detail-genres" class="genres-container"></div>
+                        <blockquote id="detail-tagline" class="movie-tagline"></blockquote>
+                        <div id="detail-rating" class="rating-display"></div>
                     </div>
                 </section>
 
-                <!-- Details Grid -->
+                <!-- Details Sections -->
                 <div class="details-grid">
                     <!-- Overview -->
-                    <section class="detail-section overview-section">
+                    <section class="detail-section">
                         <h2 class="section-title">Plot Overview</h2>
                         <p id="detail-overview" class="overview-text"></p>
                     </section>
 
                     <!-- Movie Info -->
-                    <section class="detail-section info-section">
+                    <section class="detail-section">
                         <h2 class="section-title">Movie Information</h2>
                         <div class="info-grid">
                             <div class="info-item">
@@ -141,7 +121,7 @@
                     </section>
 
                     <!-- Cast -->
-                    <section class="detail-section cast-section">
+                    <section class="detail-section">
                         <h2 class="section-title">Main Cast</h2>
                         <div id="detail-cast" class="cast-grid"></div>
                     </section>
@@ -149,7 +129,7 @@
                     <!-- Homepage -->
                     <section id="homepage-section" class="detail-section homepage-section hidden">
                         <h2 class="section-title">Official Website</h2>
-                        <a id="detail-homepage" class="homepage-link" target="_blank" rel="noopener noreferrer"></a>
+                        <a id="detail-homepage" class="homepage-link" target="_blank" rel="noopener"></a>
                     </section>
                 </div>
             </article>
@@ -157,11 +137,11 @@
     </main>
 
     <!-- Footer -->
-    <footer class="app-footer" role="contentinfo">
+    <footer class="app-footer">
         <div class="container">
             <div class="footer-content">
                 <div class="footer-brand">
-                    <img src="logo.svg" alt="" class="footer-logo" width="24" height="24">
+                    <img src="logo.png" alt="" class="footer-logo">
                     <span class="footer-text">FilmyFeed Professional</span>
                 </div>
                 <div class="footer-links">
