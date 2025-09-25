@@ -85,7 +85,7 @@ class FilmyFeedApp {
             }
         });
 
-        // Close search on escape key
+        // Close search/trailer on escape key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (this.searchActive) {
@@ -211,7 +211,7 @@ class FilmyFeedApp {
 
         // Handle movie card clicks (navigate to details)
         const card = e.target.closest('.movie-card');
-        if (card && !this.isLoading) {
+        if (card && !this.isLoading && !e.target.closest('.movie-actions')) {
             const movieId = card.dataset.id;
             if (movieId) {
                 // Add loading state
