@@ -533,4 +533,4 @@ class MovieDetailsApp {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('ðŸŽ¬ FilmyFeed Movie Details initialized');
     window.movieDetailsApp = new MovieDetailsApp();
-});
+}); 
