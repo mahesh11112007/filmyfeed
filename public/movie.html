@@ -1,206 +1,206 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#0b1020">
-  <meta name="description" content="Movie details with trailer - FilmyFeed Mobile">
-  <title>Movie Details - FilmyFeed Mobile</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0b1020">
+    <meta name="description" content="Movie details with trailer - FilmyFeed Mobile">
+    <title>Movie Details - FilmyFeed Mobile</title>
 
-  <!-- Fonts & Styles -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 
-  <!-- Mobile optimizations -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="format-detection" content="telephone=no">
+    <!-- Mobile optimizations -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
 
-  <link rel="icon" type="image/png" href="logo.png">
+    <link rel="icon" type="image/png" href="logo.png">
 </head>
 <body>
-  <!-- Header -->
-  <header class="app-header">
-    <div class="container">
-      <div class="header-content">
-        <!-- Brand -->
-        <a href="/" class="brand">
-          <div class="logo-container">
-            <img src="logo.png" alt="FilmyFeed" class="brand-logo">
-            <div class="disco-border"></div>
-          </div>
-          <div class="brand-text">
-            <span class="brand-name">FilmyFeed</span>
-            <span class="brand-tagline">Mobile</span>
-          </div>
-        </a>
+    <!-- Mobile Header -->
+    <header class="app-header">
+        <div class="container">
+            <div class="header-content">
+                <!-- Brand with disco lights -->
+                <a href="/" class="brand">
+                    <div class="logo-container">
+                        <img src="logo.png" alt="FilmyFeed" class="brand-logo">
+                        <div class="disco-border"></div>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-name">FilmyFeed</span>
+                        <span class="brand-tagline">Mobile</span>
+                    </div>
+                </a>
 
-        <!-- Navigation -->
-        <div class="mobile-nav">
-          <button class="search-toggle" id="search-toggle">
-            <span class="search-icon">🔍</span>
-          </button>
-          <a href="/" class="back-btn">← Back</a>
-        </div>
-      </div>
-
-      <!-- Search -->
-      <div class="search-wrapper hidden" id="search-wrapper">
-        <input 
-          type="search" 
-          id="search-input" 
-          class="search-input"
-          placeholder="Search movies..." 
-          autocomplete="off"
-        >
-        <button type="button" id="search-btn" class="search-btn">Go</button>
-        <button type="button" class="search-close" id="search-close">✕</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="main-content">
-    <div class="container">
-      <!-- Loading -->
-      <div id="movie-loading" class="status-card loading-card">
-        <div class="loading-spinner"></div>
-        <p class="status-text">Loading movie details...</p>
-      </div>
-
-      <!-- Error -->
-      <div id="movie-error" class="status-card error-card hidden">
-        <div class="error-icon">⚠️</div>
-        <p class="status-text">Failed to load movie. Tap to retry.</p>
-      </div>
-
-      <!-- Movie Details -->
-      <article id="movie-detail" class="movie-detail hidden">
-        <!-- Hero -->
-        <section class="mobile-hero">
-          <div class="hero-backdrop" id="hero-backdrop"></div>
-          <div class="hero-content">
-            <div class="poster-section">
-              <div class="poster-container">
-                <img id="movie-poster" class="movie-poster" alt="Movie Poster">
-                <div class="rating-overlay">
-                  <span id="movie-rating" class="rating-score">N/A</span>
-                  <span class="rating-label">/10</span>
+                <!-- Mobile Navigation -->
+                <div class="mobile-nav">
+                    <button class="search-toggle" id="search-toggle">
+                        <span class="search-icon">🔍</span>
+                    </button>
+                    <a href="/" class="back-btn">← Back</a>
                 </div>
-              </div>
             </div>
 
-            <div class="info-section">
-              <header class="movie-header">
-                <h1 id="movie-title" class="movie-title"></h1>
-                <div id="movie-meta" class="movie-meta"></div>
-                <div id="movie-genres" class="genres-list"></div>
-              </header>
-
-              <div class="action-buttons">
-                <button id="watch-trailer-btn" class="btn-primary">
-                  <span class="btn-icon">🎬</span>
-                  <span>Watch Trailer</span>
-                </button>
-                <button id="add-watchlist-btn" class="btn-secondary">
-                  <span class="btn-icon">➕</span>
-                  <span>Watchlist</span>
-                </button>
-              </div>
+            <!-- Mobile Search -->
+            <div class="search-wrapper" id="search-wrapper">
+                <input 
+                    type="search" 
+                    id="search-input" 
+                    class="search-input"
+                    placeholder="Search movies..." 
+                    autocomplete="off"
+                >
+                <button type="button" id="search-btn" class="search-btn">Go</button>
+                <button type="button" class="search-close" id="search-close">✕</button>
             </div>
-          </div>
-        </section>
-
-        <!-- Details -->
-        <div class="details-container">
-          <!-- Plot -->
-          <section class="detail-section">
-            <h2 class="section-title">Plot</h2>
-            <p id="movie-overview" class="overview-text"></p>
-          </section>
-
-          <!-- Info Grid -->
-          <section class="detail-section">
-            <h2 class="section-title">Movie Info</h2>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">Status</span>
-                <span id="movie-status" class="info-value"></span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Release</span>
-                <span id="movie-release" class="info-value"></span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Runtime</span>
-                <span id="movie-runtime" class="info-value"></span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Language</span>
-                <span id="movie-language" class="info-value"></span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Budget</span>
-                <span id="movie-budget" class="info-value"></span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Revenue</span>
-                <span id="movie-revenue" class="info-value"></span>
-              </div>
-            </div>
-          </section>
-
-          <!-- Cast -->
-          <section class="detail-section">
-            <h2 class="section-title">Cast</h2>
-            <div id="movie-cast" class="cast-grid"></div>
-          </section>
-
-          <!-- Crew -->
-          <section class="detail-section">
-            <h2 class="section-title">Crew</h2>
-            <div class="crew-info">
-              <div class="crew-item">
-                <span class="crew-label">Director</span>
-                <span id="movie-director" class="crew-value"></span>
-              </div>
-            </div>
-          </section>
         </div>
-      </article>
-    </div>
-  </main>
+    </header>
 
-  <!-- Footer -->
-  <footer class="app-footer">
-    <div class="container">
-      <div class="footer-content">
-        <span class="footer-text">FilmyFeed Mobile • Powered by TMDb</span>
-      </div>
-    </div>
-  </footer>
+    <main class="main-content">
+        <div class="container">
+            <!-- Loading State -->
+            <div id="movie-loading" class="status-card loading-card">
+                <div class="loading-spinner"></div>
+                <p class="status-text">Loading movie details...</p>
+            </div>
 
-  <!-- Trailer Modal -->
-  <div id="trailer-modal" class="trailer-modal hidden">
-    <div class="trailer-dialog">
-      <div class="trailer-header">
-        <h3 id="trailer-title" class="trailer-title">Movie Trailer</h3>
-        <button id="trailer-close" class="trailer-close">✕</button>
-      </div>
-      <div class="trailer-frame-wrap">
-        <iframe 
-          id="trailer-iframe" 
-          width="100%" 
-          height="100%" 
-          src="" 
-          title="Movie trailer" 
-          frameborder="0" 
-          allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" 
-          allowfullscreen>
-        </iframe>
-      </div>
-    </div>
-  </div>
+            <!-- Error State -->
+            <div id="movie-error" class="status-card error-card hidden">
+                <div class="error-icon">⚠️</div>
+                <p class="status-text">Failed to load movie. Tap to retry.</p>
+            </div>
 
-  <script src="movie.js"></script>
+            <!-- Movie Details -->
+            <article id="movie-detail" class="movie-detail hidden">
+                <!-- Mobile Hero Section -->
+                <section class="mobile-hero">
+                    <div class="hero-backdrop" id="hero-backdrop"></div>
+                    <div class="hero-content">
+                        <div class="poster-section">
+                            <div class="poster-container">
+                                <img id="movie-poster" class="movie-poster" alt="Movie Poster">
+                                <div class="rating-overlay">
+                                    <span id="movie-rating" class="rating-score">N/A</span>
+                                    <span class="rating-label">/10</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-section">
+                            <header class="movie-header">
+                                <h1 id="movie-title" class="movie-title"></h1>
+                                <div id="movie-meta" class="movie-meta"></div>
+                                <div id="movie-genres" class="genres-list"></div>
+                            </header>
+
+                            <div class="action-buttons">
+                                <button id="watch-trailer-btn" class="btn-primary">
+                                    <span class="btn-icon">🎬</span>
+                                    <span>Watch Trailer</span>
+                                </button>
+                                <button id="add-watchlist-btn" class="btn-secondary">
+                                    <span class="btn-icon">➕</span>
+                                    <span>Watchlist</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Mobile Details Sections -->
+                <div class="details-container">
+                    <!-- Plot Overview -->
+                    <section class="detail-section">
+                        <h2 class="section-title">Plot</h2>
+                        <p id="movie-overview" class="overview-text"></p>
+                    </section>
+
+                    <!-- Quick Info -->
+                    <section class="detail-section">
+                        <h2 class="section-title">Movie Info</h2>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Status</span>
+                                <span id="movie-status" class="info-value"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Release</span>
+                                <span id="movie-release" class="info-value"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Runtime</span>
+                                <span id="movie-runtime" class="info-value"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Language</span>
+                                <span id="movie-language" class="info-value"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Budget</span>
+                                <span id="movie-budget" class="info-value"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Revenue</span>
+                                <span id="movie-revenue" class="info-value"></span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Cast -->
+                    <section class="detail-section">
+                        <h2 class="section-title">Cast</h2>
+                        <div id="movie-cast" class="cast-grid"></div>
+                    </section>
+
+                    <!-- Director & Crew -->
+                    <section class="detail-section">
+                        <h2 class="section-title">Crew</h2>
+                        <div class="crew-info">
+                            <div class="crew-item">
+                                <span class="crew-label">Director</span>
+                                <span id="movie-director" class="crew-value"></span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </article>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="container">
+            <div class="footer-content">
+                <span class="footer-text">FilmyFeed Mobile • Powered by TMDb</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Mobile Trailer Modal -->
+    <div id="trailer-modal" class="trailer-modal hidden">
+        <div class="trailer-dialog">
+            <div class="trailer-header">
+                <h3 id="trailer-title" class="trailer-title">Movie Trailer</h3>
+                <button id="trailer-close" class="trailer-close">✕</button>
+            </div>
+            <div class="trailer-frame-wrap">
+                <iframe 
+                    id="trailer-iframe" 
+                    width="100%" 
+                    height="100%" 
+                    src="" 
+                    title="Movie trailer" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+        </div>
+    </div>
+
+    <script src="movie.js"></script>
 </body>
 </html>
