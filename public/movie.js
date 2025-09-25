@@ -1,16 +1,16 @@
 /**
  * FilmyFeed Professional - Movie Details Controller
- * Handles individual movie information display
+ * Features: Complete movie information, collapsible search
  */
 
 class MovieDetailsApp {
     constructor() {
         this.API_BASE = '/api';
         this.IMG_BASE = 'https://image.tmdb.org/t/p/w500';
-        this.IMG_ORIGINAL = 'https://image.tmdb.org/t/p/original';
         this.movieId = null;
         this.movieData = null;
         this.creditsData = null;
+        this.searchActive = false;
 
         // DOM elements
         this.elements = {
@@ -42,9 +42,11 @@ class MovieDetailsApp {
             homepageSection: document.getElementById('homepage-section'),
 
             // Search elements
+            searchToggle: document.getElementById('search-toggle'),
+            searchWrapper: document.getElementById('search-wrapper'),
             searchInput: document.getElementById('search-input'),
             searchBtn: document.getElementById('search-btn'),
-            searchForm: document.querySelector('.search-form')
+            searchClose: document.getElementById('search-close')
         };
 
         this.init();
@@ -57,21 +59,81 @@ class MovieDetailsApp {
     }
 
     setupEventListeners() {
+        // Search toggle functionality
+        this.elements.searchToggle?.addEventListener('click', () => {
+            this.toggleSearch();
+        });
+
+        this.elements.searchClose?.addEventListener('click', () => {
+            this.closeSearch();
+        });
+
         // Search functionality
-        this.elements.searchForm?.addEventListener('submit', (e) => {
-            e.preventDefault();
+        this.elements.searchBtn?.addEventListener('click', () => {
             this.handleSearch();
         });
 
-        this.elements.searchBtn?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.handleSearch();
+        this.elements.searchInput?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.handleSearch();
+            }
         });
 
         // Error retry
         this.elements.errorEl?.addEventListener('click', () => {
             this.loadMovieDetails();
         });
+
+        // Close search on outside click
+        document.addEventListener('click', (e) => {
+            if (this.searchActive && 
+                !e.target.closest('.search-container') && 
+                !e.target.closest('.search-toggle')) {
+                this.closeSearch();
+            }
+        });
+
+        // Close search on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.searchActive) {
+                this.closeSearch();
+            }
+        });
+    }
+
+    toggleSearch() {
+        if (this.searchActive) {
+            this.closeSearch();
+        } else {
+            this.openSearch();
+        }
+    }
+
+    openSearch() {
+        this.searchActive = true;
+        this.elements.searchWrapper?.classList.add('active');
+        setTimeout(() => {
+            this.elements.searchInput?.focus();
+        }, 200);
+    }
+
+    closeSearch() {
+        this.searchActive = false;
+        this.elements.searchWrapper?.classList.remove('active');
+        if (this.elements.searchInput) {
+            this.elements.searchInput.value = '';
+        }
+    }
+
+    handleSearch() {
+        const query = this.elements.searchInput?.value.trim();
+
+        if (!query) {
+            window.location.href = '/';
+            return;
+        }
+
+        window.location.href = `/?q=${encodeURIComponent(query)}`;
     }
 
     extractMovieId() {
@@ -106,7 +168,7 @@ class MovieDetailsApp {
 
             this.renderMovieDetails();
             this.updatePageTitle();
-            this.hideLoading();
+            this.showDetails();
 
         } catch (error) {
             console.error('Error loading movie details:', error);
@@ -123,11 +185,7 @@ class MovieDetailsApp {
             }
         });
 
-        const response = await fetch(url.toString(), {
-            headers: {
-                'Accept': 'application/json',
-            }
-        });
+        const response = await fetch(url.toString());
 
         if (!response.ok) {
             throw new Error(`API request failed: ${response.status}`);
@@ -144,7 +202,6 @@ class MovieDetailsApp {
         this.renderCredits();
         this.renderTechnicalInfo();
         this.renderHomepage();
-        this.showDetails();
     }
 
     renderBasicInfo() {
@@ -168,7 +225,7 @@ class MovieDetailsApp {
         // Meta information
         const language = (this.movieData.original_language || '').toUpperCase();
         const voteCount = this.movieData.vote_count || 0;
-        const metaText = `Original Language: ${language || 'Unknown'} â€¢ ${voteCount.toLocaleString()} votes`;
+        const metaText = `Language: ${language || 'Unknown'} â€¢ ${voteCount.toLocaleString()} votes`;
 
         if (this.elements.meta) {
             this.elements.meta.textContent = metaText;
@@ -335,24 +392,9 @@ class MovieDetailsApp {
         document.title = `${title} - FilmyFeed Professional`;
     }
 
-    handleSearch() {
-        const query = this.elements.searchInput?.value.trim();
-
-        if (!query) {
-            window.location.href = '/';
-            return;
-        }
-
-        window.location.href = `/?q=${encodeURIComponent(query)}`;
-    }
-
     showLoading() {
         this.hideAllStatus();
         this.elements.loadingEl?.classList.remove('hidden');
-    }
-
-    hideLoading() {
-        this.elements.loadingEl?.classList.add('hidden');
     }
 
     showError(message) {
