@@ -1,6 +1,6 @@
 /**
- * FilmyFeed Professional - Home Page Controller
- * Features: Latest movies, search, collapsible search UI
+ * FilmyFeed Professional - Home Page with YouTube Trailers
+ * Features: Latest movies, search, collapsible search, trailer playback
  */
 
 class FilmyFeedApp {
@@ -22,7 +22,13 @@ class FilmyFeedApp {
             pageTitle: document.getElementById('page-title'),
             loadingEl: document.getElementById('loading'),
             errorEl: document.getElementById('error'),
-            noResultsEl: document.getElementById('no-results')
+            noResultsEl: document.getElementById('no-results'),
+
+            // Trailer modal elements
+            trailerModal: document.getElementById('trailer-modal'),
+            trailerClose: document.getElementById('trailer-close'),
+            trailerIframe: document.getElementById('trailer-iframe'),
+            trailerTitle: document.getElementById('trailer-title')
         };
 
         this.init();
@@ -55,12 +61,9 @@ class FilmyFeedApp {
             }
         });
 
-        // Movie card clicks
+        // Movie grid clicks (both trailer buttons and movie cards)
         this.elements.moviesGrid?.addEventListener('click', (e) => {
-            const card = e.target.closest('.movie-card');
-            if (card && !this.isLoading) {
-                this.handleMovieClick(card);
-            }
+            this.handleGridClick(e);
         });
 
         // Browser navigation
@@ -84,8 +87,23 @@ class FilmyFeedApp {
 
         // Close search on escape key
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.searchActive) {
-                this.closeSearch();
+            if (e.key === 'Escape') {
+                if (this.searchActive) {
+                    this.closeSearch();
+                } else if (!this.elements.trailerModal.classList.contains('hidden')) {
+                    this.closeTrailer();
+                }
+            }
+        });
+
+        // Trailer modal events
+        this.elements.trailerClose?.addEventListener('click', () => {
+            this.closeTrailer();
+        });
+
+        this.elements.trailerModal?.addEventListener('click', (e) => {
+            if (e.target === this.elements.trailerModal) {
+                this.closeTrailer();
             }
         });
     }
@@ -110,7 +128,6 @@ class FilmyFeedApp {
     closeSearch() {
         this.searchActive = false;
         this.elements.searchWrapper?.classList.remove('active');
-        this.elements.searchInput.value = '';
     }
 
     handleInitialLoad() {
@@ -176,25 +193,122 @@ class FilmyFeedApp {
         }
     }
 
-    handleMovieClick(card) {
-        const movieId = card.dataset.id;
-        if (movieId) {
-            // Add loading state
-            card.style.opacity = '0.7';
-            card.style.pointerEvents = 'none';
+    async handleGridClick(e) {
+        // Handle trailer button clicks
+        const trailerBtn = e.target.closest('.btn-trailer');
+        if (trailerBtn) {
+            e.preventDefault();
+            e.stopPropagation();
 
-            // Navigate to movie details
-            window.location.href = `/movie.html?id=${encodeURIComponent(movieId)}`;
+            const movieId = trailerBtn.dataset.id;
+            const movieTitle = trailerBtn.dataset.title || 'Movie';
+
+            if (movieId) {
+                await this.playTrailer(movieId, movieTitle);
+            }
+            return;
+        }
+
+        // Handle movie card clicks (navigate to details)
+        const card = e.target.closest('.movie-card');
+        if (card && !this.isLoading) {
+            const movieId = card.dataset.id;
+            if (movieId) {
+                // Add loading state
+                card.style.opacity = '0.7';
+                card.style.pointerEvents = 'none';
+
+                // Navigate to movie details
+                window.location.href = `/movie.html?id=${encodeURIComponent(movieId)}`;
+            }
         }
     }
 
+    async playTrailer(movieId, movieTitle) {
+        try {
+            // Show loading state
+            this.elements.trailerTitle.textContent = 'Loading trailer...';
+            this.elements.trailerModal.classList.remove('hidden');
+
+            // Fetch trailer
+            const trailerKey = await this.fetchTrailerKey(movieId);
+
+            if (trailerKey) {
+                this.openTrailer(trailerKey, movieTitle);
+            } else {
+                this.closeTrailer();
+                this.showTrailerError('Trailer not available for this movie');
+            }
+        } catch (error) {
+            console.error('Error loading trailer:', error);
+            this.closeTrailer();
+            this.showTrailerError('Failed to load trailer');
+        }
+    }
+
+    async fetchTrailerKey(movieId) {
+        try {
+            const response = await this.fetchFromAPI(`movie/${movieId}/videos`);
+            const videos = response?.results || [];
+
+            // Sort videos by preference: Official trailers first, then teasers
+            const sortedVideos = videos.sort((a, b) => {
+                // Prefer official videos
+                if (a.official !== b.official) {
+                    return b.official - a.official;
+                }
+                // Prefer trailers over teasers
+                if (a.type !== b.type) {
+                    if (a.type === 'Trailer' && b.type !== 'Trailer') return -1;
+                    if (b.type === 'Trailer' && a.type !== 'Trailer') return 1;
+                    if (a.type === 'Teaser' && b.type !== 'Teaser') return -1;
+                    if (b.type === 'Teaser' && a.type !== 'Teaser') return 1;
+                }
+                return 0;
+            });
+
+            // Find the best YouTube video
+            const youtubeVideo = sortedVideos.find(video => 
+                video.site === 'YouTube' && 
+                (video.type === 'Trailer' || video.type === 'Teaser')
+            );
+
+            return youtubeVideo?.key || null;
+        } catch (error) {
+            console.error('Error fetching trailer:', error);
+            return null;
+        }
+    }
+
+    openTrailer(youtubeKey, movieTitle) {
+        this.elements.trailerTitle.textContent = `${movieTitle} - Trailer`;
+        this.elements.trailerIframe.src = `https://www.youtube.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1`;
+        this.elements.trailerModal.classList.remove('hidden');
+
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeTrailer() {
+        this.elements.trailerIframe.src = '';
+        this.elements.trailerModal.classList.add('hidden');
+
+        // Re-enable body scroll
+        document.body.style.overflow = '';
+    }
+
+    showTrailerError(message) {
+        // Simple alert for now - could be enhanced with a custom modal
+        alert(message);
+    }
+
     async loadLatestMovies() {
-        this.updatePageHeader('Latest Released Movies', 'Discover the newest releases in theaters worldwide');
+        this.updatePageHeader('Latest Released Movies', 'Discover the newest releases in theaters worldwide with trailers');
         await this.fetchAndRenderMovies('latest');
     }
 
     async loadSearchResults(query) {
-        this.updatePageHeader(`Search Results for "${query}"`, `Found movies matching your search`);
+        this.updatePageHeader(`Search Results for "${query}"`, `Found movies matching your search with trailers`);
         await this.fetchAndRenderMovies('search', { query });
     }
 
@@ -223,6 +337,7 @@ class FilmyFeedApp {
     }
 
     async fetchLatestMovies() {
+        // Fetch multiple pages for more variety
         const [page1, page2] = await Promise.all([
             this.fetchFromAPI('movie/now_playing', { 
                 page: 1, 
@@ -299,10 +414,12 @@ class FilmyFeedApp {
 
         return `
             <article class="movie-card" data-id="${movie.id}" role="button" tabindex="0">
-                ${posterUrl 
-                    ? `<img class="movie-poster" src="${posterUrl}" alt="${title} poster" loading="lazy">` 
-                    : `<div class="movie-poster" aria-label="No poster available"></div>`
-                }
+                <div class="poster-container">
+                    ${posterUrl 
+                        ? `<img class="movie-poster" src="${posterUrl}" alt="${title} poster" loading="lazy">` 
+                        : `<div class="movie-poster" aria-label="No poster available"></div>`
+                    }
+                </div>
                 <div class="movie-info">
                     <h3 class="movie-title" title="${title}">${title}</h3>
                     <div class="movie-meta">
@@ -312,6 +429,16 @@ class FilmyFeedApp {
                         <span class="badge">
                             <span class="rating">â˜… ${rating}</span>
                         </span>
+                    </div>
+                    <div class="movie-actions">
+                        <button class="btn-trailer" data-id="${movie.id}" data-title="${title}" 
+                                aria-label="Watch ${title} trailer">
+                            ðŸŽ¬ Watch Trailer
+                        </button>
+                        <button class="btn-details" onclick="window.location.href='/movie.html?id=${movie.id}'"
+                                aria-label="View ${title} details">
+                            Details
+                        </button>
                     </div>
                 </div>
             </article>
