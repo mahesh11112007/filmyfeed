@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b1020">
-    <title>Movie Details - FilmyFeed</title>
+    <title>Movie Details - FilmyFeed Professional</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
@@ -56,7 +56,7 @@
             <!-- Error State -->
             <div id="detail-error" class="status-card error-card hidden">
                 <div class="error-icon">⚠️</div>
-                <p class="status-text">Failed to load movie details.</p>
+                <p class="status-text">Failed to load movie details. Click to retry.</p>
             </div>
 
             <!-- Movie Details -->
@@ -69,11 +69,20 @@
                     </div>
 
                     <div class="hero-content">
-                        <h1 id="detail-title" class="movie-title"></h1>
-                        <div id="detail-meta" class="movie-meta"></div>
-                        <div id="detail-genres" class="genres-container"></div>
-                        <blockquote id="detail-tagline" class="movie-tagline"></blockquote>
-                        <div id="detail-rating" class="rating-display"></div>
+                        <header class="movie-header">
+                            <h1 id="detail-title" class="movie-title"></h1>
+                            <div id="detail-meta" class="movie-meta"></div>
+                            <div id="detail-genres" class="genres-container"></div>
+                            <blockquote id="detail-tagline" class="movie-tagline"></blockquote>
+                        </header>
+
+                        <div class="hero-actions">
+                            <div id="detail-rating" class="rating-display"></div>
+                            <button id="watch-trailer-btn" class="btn btn-primary">
+                                <span class="btn-icon">🎬</span>
+                                <span>Watch Trailer</span>
+                            </button>
+                        </div>
                     </div>
                 </section>
 
@@ -152,6 +161,30 @@
             </div>
         </div>
     </footer>
+
+    <!-- YouTube Trailer Modal -->
+    <div id="trailer-modal" class="trailer-modal hidden">
+        <div class="trailer-dialog">
+            <div class="trailer-header">
+                <h3 id="trailer-title" class="trailer-title">Movie Trailer</h3>
+                <button id="trailer-close" class="trailer-close" aria-label="Close trailer">
+                    <span>✕</span>
+                </button>
+            </div>
+            <div class="trailer-frame-wrap">
+                <iframe 
+                    id="trailer-iframe" 
+                    width="560" 
+                    height="315" 
+                    src="" 
+                    title="YouTube movie trailer" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+        </div>
+    </div>
 
     <script src="movie.js"></script>
 </body>
