@@ -1,11 +1,54 @@
 {
   "version": 2,
+  "name": "filmyfeed-professional",
+  "description": "Professional movie discovery platform",
   "builds": [
-    { "src": "server.js", "use": "@vercel/node" },
-    { "src": "public/**/*", "use": "@vercel/static" }
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/**/*",
+      "use": "@vercel/static"
+    }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/server.js" },
-    { "src": "/(.*)", "dest": "/public/$1" }
-  ]
+    {
+      "src": "/health",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/movie.html",
+      "dest": "/public/movie.html"
+    },
+    {
+      "src": "/(.*\\.(js|css|svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot))",
+      "dest": "/public/$1",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
+        }
+      ]
+    }
+  ],
+  "env": {
+    "TMDB_API_KEY": "@tmdb_api_key"
+  }
 }
