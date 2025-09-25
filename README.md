@@ -4,7 +4,7 @@ A responsive movie discovery web application built with Node.js, Express, and Th
 
 ## Features
 
-- ðŸŽ¬ Browse Latest Released Movies (Now Playing)
+- ðŸŽ¬ Browse Latest Released Movies
 - ðŸ” Search Movies with URL navigation
 - ðŸ“± Responsive design for mobile and desktop
 - ðŸŒ™ Dark theme UI
