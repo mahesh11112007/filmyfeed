@@ -141,7 +141,7 @@ function handleSearch() {
 // Loaders
 function loadNowPlaying() {
     isSearching = false;
-    pageTitle.textContent = 'Now Playing';
+    pageTitle.textContent = 'Latest Movies Released';
     fetchAndRenderNowPlaying();
 }
 
