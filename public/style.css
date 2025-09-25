@@ -59,6 +59,12 @@ header {
     border: none;
     border-radius: 4px;
     font-size: 1rem;
+    background-color: #fff;
+    color: #333;
+}
+
+#search-input::placeholder {
+    color: #666;
 }
 
 #search-btn {
@@ -69,6 +75,7 @@ header {
     border-radius: 4px;
     cursor: pointer;
     font-weight: 600;
+    transition: opacity 0.3s ease;
 }
 
 #search-btn:hover {
@@ -77,18 +84,21 @@ header {
 
 main {
     padding: 2rem 0;
+    min-height: 60vh;
 }
 
 #page-title {
     text-align: center;
     margin-bottom: 2rem;
     font-size: 2rem;
+    color: var(--text);
 }
 
 .movies-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 1.5rem;
+    padding: 1rem 0;
 }
 
 .movie-card {
@@ -97,6 +107,7 @@ main {
     overflow: hidden;
     cursor: pointer;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .movie-card:hover {
@@ -108,6 +119,7 @@ main {
     width: 100%;
     height: 270px;
     object-fit: cover;
+    background-color: #333;
 }
 
 .movie-info {
@@ -120,24 +132,38 @@ main {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-size: 0.9rem;
 }
 
 .movie-date,
 .movie-rating {
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     color: #aaa;
+    margin-bottom: 0.2rem;
+}
+
+.movie-rating {
+    color: #ffd700;
 }
 
 .loading,
 .error,
 .no-results {
     text-align: center;
-    padding: 2rem;
-    font-size: 1.25rem;
+    padding: 3rem 2rem;
+    font-size: 1.1rem;
+}
+
+.loading {
+    color: var(--accent);
 }
 
 .error {
     color: var(--error);
+}
+
+.no-results {
+    color: #aaa;
 }
 
 .hidden {
@@ -156,16 +182,20 @@ main {
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    padding: 1rem;
 }
 
 .modal-content {
     background-color: var(--card-bg);
-    width: 90%;
+    width: 100%;
     max-width: 600px;
+    max-height: 90vh;
     border-radius: 10px;
     position: relative;
     padding: 2rem;
     color: var(--text);
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .close {
@@ -177,12 +207,41 @@ main {
     border: none;
     background: transparent;
     color: var(--text);
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.3s ease;
+}
+
+.close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#modal-body h2 {
+    margin-bottom: 1rem;
+    color: var(--text);
 }
 
 #modal-body img {
     width: 100%;
+    max-width: 300px;
     border-radius: 8px;
-    margin-bottom: 1rem;
+    margin: 1rem 0;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#modal-body p {
+    margin-bottom: 0.8rem;
+    line-height: 1.6;
+}
+
+#modal-body p strong {
+    color: var(--accent);
 }
 
 footer {
@@ -191,16 +250,53 @@ footer {
     background-color: var(--secondary);
     font-size: 0.875rem;
     color: #aaa;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Responsive */
+/* Responsive Design */
 @media (max-width: 768px) {
+    .container {
+        padding: 0 0.5rem;
+    }
+
     .search-container {
         flex-direction: column;
+    }
+
+    #search-input,
+    #search-btn {
+        width: 100%;
     }
 
     .movies-grid {
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         gap: 1rem;
+    }
+
+    .movie-poster {
+        height: 210px;
+    }
+
+    #page-title {
+        font-size: 1.5rem;
+    }
+
+    .modal-content {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .movies-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+
+    .movie-poster {
+        height: 180px;
+    }
+
+    .logo h1 {
+        font-size: 1.5rem;
     }
 }
