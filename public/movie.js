@@ -1,6 +1,6 @@
 /**
- * FilmyFeed Mobile App - Netflix-style Movie Details Page
- * Features: Hero backdrop, trailer modal, cast/crew, similar movies
+ * FilmyFeed Movie Details Page
+ * Netflix-style movie details with trailer modal, cast info, and navigation
  */
 
 class MovieDetailsApp {
@@ -35,8 +35,8 @@ class MovieDetailsApp {
             // Action buttons
             playBtn: document.getElementById('play-btn'),
             trailerBtn: document.getElementById('trailer-btn'),
+            downloadBtn: document.getElementById('download-btn'),
             addListBtn: document.getElementById('add-list-btn'),
-            likeBtn: document.getElementById('like-btn'),
 
             // Details
             movieOverview: document.getElementById('movie-overview'),
@@ -97,12 +97,12 @@ class MovieDetailsApp {
             this.playTrailer();
         });
 
-        this.elements.addListBtn?.addEventListener('click', () => {
-            this.toggleMyList();
+        this.elements.downloadBtn?.addEventListener('click', () => {
+            this.downloadMovie();
         });
 
-        this.elements.likeBtn?.addEventListener('click', () => {
-            this.toggleLike();
+        this.elements.addListBtn?.addEventListener('click', () => {
+            this.toggleMyList();
         });
 
         // Trailer modal
@@ -119,7 +119,7 @@ class MovieDetailsApp {
         // Keyboard navigation
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                if (!this.elements.trailerModal.classList.contains('hidden')) {
+                if (!this.elements.trailerModal?.classList.contains('hidden')) {
                     this.closeTrailer();
                 }
             }
@@ -235,7 +235,7 @@ class MovieDetailsApp {
         if (!this.elements.movieGenres || !this.movieData.genres) return;
 
         const genresHTML = this.movieData.genres
-            .slice(0, 3) // Limit to 3 genres for mobile
+            .slice(0, 3)
             .map(genre => `<span class="genre-tag">${this.escapeHtml(genre.name)}</span>`)
             .join('');
 
@@ -316,7 +316,7 @@ class MovieDetailsApp {
             <div class="related-card movie-card" data-id="${movie.id}" role="button" tabindex="0">
                 ${posterUrl 
                     ? `<img class="card-poster" src="${posterUrl}" alt="${title}" loading="lazy">` 
-                    : '<div class="card-poster" style="background: var(--bg-card); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.8rem;">No Image</div>'
+                    : '<div class="card-poster no-poster"><span>No Image</span></div>'
                 }
                 <div class="card-info">
                     <div class="card-title">${title}</div>
@@ -328,8 +328,9 @@ class MovieDetailsApp {
 
     // Action Functions
     playMovie() {
-        // Placeholder for play functionality
-        this.showNotification('Play functionality coming soon!');
+        if (this.movieId) {
+            window.location.href = `/watch.html?id=${encodeURIComponent(this.movieId)}`;
+        }
     }
 
     async playTrailer() {
@@ -353,22 +354,19 @@ class MovieDetailsApp {
         }
     }
 
+    downloadMovie() {
+        if (this.movieId) {
+            window.open(`/api/download/${this.movieId}?quality=1080p`, '_blank');
+            this.showNotification('Download started');
+        }
+    }
+
     async fetchTrailerKey() {
         try {
             const response = await this.fetchFromAPI(`movie/${this.movieId}/videos`);
             const videos = response.results || [];
 
-            // Sort by preference: Official trailers first
-            const sortedVideos = videos.sort((a, b) => {
-                if (a.official !== b.official) return b.official - a.official;
-                if (a.type !== b.type) {
-                    if (a.type === 'Trailer' && b.type !== 'Trailer') return -1;
-                    if (b.type === 'Trailer' && a.type !== 'Trailer') return 1;
-                }
-                return 0;
-            });
-
-            const youtubeVideo = sortedVideos.find(video => 
+            const youtubeVideo = videos.find(video => 
                 video.site === 'YouTube' && 
                 (video.type === 'Trailer' || video.type === 'Teaser')
             );
@@ -384,7 +382,7 @@ class MovieDetailsApp {
         const movieTitle = this.movieData?.title || 'Movie';
         this.elements.trailerTitle.textContent = `${movieTitle} - Trailer`;
         this.elements.trailerIframe.src = 
-            `https://www.youtube.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+            `https://www.youtube.com/embed/${youtubeKey}?autoplay=1&rel=0`;
         this.elements.trailerModal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }
@@ -406,11 +404,6 @@ class MovieDetailsApp {
             svg.setAttribute('d', 'M12 5v14m-7-7h14'); // Plus
             this.showNotification('Removed from My List');
         }
-    }
-
-    toggleLike() {
-        const isLiked = this.elements.likeBtn.classList.toggle('liked');
-        this.showNotification(isLiked ? 'Liked!' : 'Like removed');
     }
 
     shareMovie() {
@@ -533,4 +526,4 @@ class MovieDetailsApp {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('ðŸŽ¬ FilmyFeed Movie Details initialized');
     window.movieDetailsApp = new MovieDetailsApp();
-}); 
+});
