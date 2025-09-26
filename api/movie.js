@@ -14,11 +14,10 @@ export default async function handler(req, res) {
         });
     }
     
-    // Get movie ID from URL
-    const { query } = req;
-    const movieId = query.id;
+    // Get movie ID from query
+    const { id } = req.query;
     
-    if (!movieId) {
+    if (!id) {
         return res.status(400).json({ 
             success: false,
             error: 'Movie ID is required' 
@@ -27,7 +26,7 @@ export default async function handler(req, res) {
     
     try {
         // Fetch from TMDB
-        const tmdbUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${TMDB_API_KEY}&language=en-US`;
+        const tmdbUrl = `https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}&language=en-US`;
         
         const response = await fetch(tmdbUrl);
         
