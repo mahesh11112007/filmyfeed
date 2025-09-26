@@ -1,390 +1,243 @@
 /**
- * FilmyFeed Professional Video Player
- * Netflix-style video player with HLS streaming, quality selection, mobile controls
+ * FilmyFeed Player (Enhanced)
+ * - HLS.js with auto & manual quality selection
+ * - Mobile-friendly controls
+ * - Download integration
+ * - Basic subtitle support (VTT)
  */
 
 class FilmyFeedPlayer {
-    constructor(container, options = {}) {
-        this.container = container;
-        this.movieId = options.movieId;
-        this.autoplay = options.autoplay || false;
-        this.startTime = options.startTime || 0;
+  constructor(container, opts = {}) {
+    this.container = container;
+    this.movieId = opts.movieId;
+    this.autoplay = !!opts.autoplay;
+    this.hls = null;
+    this.video = null;
+    this.qualities = [];
+    this.currentLevel = -1; // -1 = auto
+    this.API = '/api';
+    this.bind();
+  }
 
-        // Player state
-        this.isPlaying = false;
-        this.currentTime = 0;
-        this.duration = 0;
-        this.volume = 1;
-        this.isMuted = false;
-        this.currentQuality = 'auto';
-        this.availableQualities = [];
-        this.controlsVisible = true;
-        this.isFullscreen = false;
-
-        // HLS instance
-        this.hls = null;
-        this.video = null;
-
-        // Touch/gesture state
-        this.touchStartX = 0;
-        this.touchStartY = 0;
-        this.lastTouchTime = 0;
-        this.isSeekingByTouch = false;
-
-        this.init();
-    }
-
-    init() {
-        this.createPlayerHTML();
-        this.setupVideoElement();
-        this.setupHLS();
-        this.setupEventListeners();
-        this.setupTouchControls();
-
-        if (this.movieId) {
-            this.loadMovie(this.movieId);
-        }
-    }
-
-    createPlayerHTML() {
-        this.container.innerHTML = `
-            <div class="filmyfeed-player" id="filmyfeed-player">
-                <video 
-                    class="player-video" 
-                    id="player-video"
-                    playsinline
-                    webkit-playsinline
-                    preload="metadata"
-                ></video>
-
-                <!-- Loading Overlay -->
-                <div class="player-loading" id="player-loading">
-                    <div class="loading-spinner"></div>
-                    <span class="loading-text">Loading video...</span>
-                </div>
-
-                <!-- Error Overlay -->
-                <div class="player-error hidden" id="player-error">
-                    <div class="error-icon">âš ï¸</div>
-                    <h3 class="error-title">Playback Error</h3>
-                    <p class="error-message">Unable to load video. Please try again.</p>
-                    <button class="retry-btn" id="retry-btn">Retry</button>
-                </div>
-
-                <!-- Player Controls -->
-                <div class="player-controls" id="player-controls">
-                    <!-- Top Controls -->
-                    <div class="controls-top">
-                        <button class="control-btn back-btn" id="back-btn" aria-label="Back">
-                            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M15 18l-6-6 6-6"/>
-                            </svg>
-                        </button>
-                        <div class="movie-info">
-                            <h3 class="movie-title" id="player-movie-title">Loading...</h3>
-                            <p class="movie-meta" id="player-movie-meta"></p>
-                        </div>
-                        <button class="control-btn cast-btn" id="cast-btn" aria-label="Cast">
-                            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M21 3H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11z"/>
-                            </svg>
-                        </button>
-                    </div>
-
-                    <!-- Center Play Button -->
-                    <div class="controls-center">
-                        <button class="play-btn-large" id="play-btn-large" aria-label="Play/Pause">
-                            <svg class="play-icon" width="32" height="32" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
-                            </svg>
-                            <svg class="pause-icon hidden" width="32" height="32" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                            </svg>
-                        </button>
-                    </div>
-
-                    <!-- Bottom Controls -->
-                    <div class="controls-bottom">
-                        <!-- Progress Bar -->
-                        <div class="progress-section">
-                            <div class="progress-bar" id="progress-bar">
-                                <div class="progress-buffer" id="progress-buffer"></div>
-                                <div class="progress-played" id="progress-played"></div>
-                                <div class="progress-handle" id="progress-handle"></div>
-                            </div>
-                            <div class="time-display">
-                                <span class="current-time" id="current-time">0:00</span>
-                                <span class="duration" id="duration">0:00</span>
-                            </div>
-                        </div>
-
-                        <!-- Control Buttons -->
-                        <div class="control-buttons">
-                            <button class="control-btn play-btn" id="play-btn" aria-label="Play/Pause">
-                                <svg class="play-icon" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z"/>
-                                </svg>
-                                <svg class="pause-icon hidden" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                                </svg>
-                            </button>
-
-                            <button class="control-btn volume-btn" id="volume-btn" aria-label="Volume">
-                                <svg class="volume-high" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                                </svg>
-                                <svg class="volume-muted hidden" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
-                                </svg>
-                            </button>
-
-                            <button class="control-btn quality-btn" id="quality-btn" aria-label="Quality">
-                                <span class="quality-text">AUTO</span>
-                            </button>
-
-                            <button class="control-btn subtitles-btn" id="subtitles-btn" aria-label="Subtitles">
-                                <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/>
-                                </svg>
-                            </button>
-
-                            <button class="control-btn download-btn" id="download-btn" aria-label="Download">
-                                <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                                </svg>
-                            </button>
-
-                            <button class="control-btn fullscreen-btn" id="fullscreen-btn" aria-label="Fullscreen">
-                                <svg class="expand" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
-                                </svg>
-                                <svg class="compress hidden" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quality Selection Menu -->
-                <div class="quality-menu hidden" id="quality-menu">
-                    <div class="menu-header">
-                        <h4>Video Quality</h4>
-                    </div>
-                    <div class="quality-options" id="quality-options">
-                        <!-- Quality options populated dynamically -->
-                    </div>
-                </div>
+  bind() {
+    this.container.innerHTML = `
+      <div class="ff-player">
+        <video id="ff-video" class="ff-video" playsinline webkit-playsinline preload="metadata"></video>
+        <div class="ff-ui">
+          <div class="ff-top">
+            <button id="ff-back" class="ff-btn" aria-label="Back">âŸµ</button>
+            <div class="ff-title-wrap">
+              <div id="ff-title" class="ff-title">Loading...</div>
+              <div id="ff-meta" class="ff-meta"></div>
             </div>
-        `;
+            <button id="ff-quality" class="ff-btn">AUTO</button>
+          </div>
+          <div class="ff-center">
+            <button id="ff-playbig" class="ff-playbig">â–¶</button>
+          </div>
+          <div class="ff-bottom">
+            <div id="ff-progress" class="ff-progress">
+              <div id="ff-buffer" class="ff-buffer"></div>
+              <div id="ff-played" class="ff-played"></div>
+            </div>
+            <div class="ff-controls">
+              <button id="ff-play" class="ff-btn">â–¶</button>
+              <div class="ff-time"><span id="ff-cur">0:00</span> / <span id="ff-dur">0:00</span></div>
+              <div class="ff-gap"></div>
+              <button id="ff-sub" class="ff-btn">CC</button>
+              <button id="ff-dl" class="ff-btn">â¬‡</button>
+              <button id="ff-full" class="ff-btn">â›¶</button>
+            </div>
+          </div>
+        </div>
+        <div id="ff-loading" class="ff-loading"><div class="ff-spin"></div><span>Loadingâ€¦</span></div>
+        <div id="ff-error" class="ff-error hidden"><span id="ff-errmsg">Playback error</span><button id="ff-retry" class="ff-btn ff-retry">Retry</button></div>
+        <div id="ff-qmenu" class="ff-qmenu hidden"></div>
+      </div>`;
 
-        // Get elements
-        this.video = document.getElementById('player-video');
-        this.playBtnLarge = document.getElementById('play-btn-large');
-        this.playBtn = document.getElementById('play-btn');
-        this.progressBar = document.getElementById('progress-bar');
-        this.progressPlayed = document.getElementById('progress-played');
-        this.progressBuffer = document.getElementById('progress-buffer');
-        this.currentTimeEl = document.getElementById('current-time');
-        this.durationEl = document.getElementById('duration');
-        this.controls = document.getElementById('player-controls');
-        this.loading = document.getElementById('player-loading');
-        this.error = document.getElementById('player-error');
+    this.video = this.container.querySelector('#ff-video');
+    this.elements = {
+      back: this.container.querySelector('#ff-back'),
+      quality: this.container.querySelector('#ff-quality'),
+      playbig: this.container.querySelector('#ff-playbig'),
+      play: this.container.querySelector('#ff-play'),
+      full: this.container.querySelector('#ff-full'),
+      dl: this.container.querySelector('#ff-dl'),
+      sub: this.container.querySelector('#ff-sub'),
+      qmenu: this.container.querySelector('#ff-qmenu'),
+      progress: this.container.querySelector('#ff-progress'),
+      played: this.container.querySelector('#ff-played'),
+      buffer: this.container.querySelector('#ff-buffer'),
+      cur: this.container.querySelector('#ff-cur'),
+      dur: this.container.querySelector('#ff-dur'),
+      title: this.container.querySelector('#ff-title'),
+      meta: this.container.querySelector('#ff-meta'),
+      loading: this.container.querySelector('#ff-loading'),
+      error: this.container.querySelector('#ff-error'),
+      errmsg: this.container.querySelector('#ff-errmsg'),
+      retry: this.container.querySelector('#ff-retry'),
+    };
+
+    this.wireEvents();
+  }
+
+  wireEvents() {
+    const v = this.video;
+    v.addEventListener('loadedmetadata', () => {
+      this.updateDuration();
+      this.hide(this.elements.loading);
+    });
+    v.addEventListener('timeupdate', () => this.updateProgress());
+    v.addEventListener('progress', () => this.updateBuffer());
+    v.addEventListener('waiting', () => this.show(this.elements.loading));
+    v.addEventListener('canplay', () => this.hide(this.elements.loading));
+    v.addEventListener('error', () => this.fail('Video error'));
+
+    this.elements.play.addEventListener('click', () => this.toggle());
+    this.elements.playbig.addEventListener('click', () => this.toggle());
+    this.elements.full.addEventListener('click', () => this.fullscreen());
+    this.elements.back.addEventListener('click', () => history.back());
+    this.elements.retry.addEventListener('click', () => this.reload());
+
+    this.elements.progress.addEventListener('click', (e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pct = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+      v.currentTime = pct * v.duration;
+    });
+
+    this.elements.dl.addEventListener('click', () => this.download());
+    this.elements.quality.addEventListener('click', () => this.toggleQMenu());
+    this.elements.sub.addEventListener('click', () => this.toggleSubtitles());
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') { e.preventDefault(); this.toggle(); }
+      if (e.code === 'KeyF') { this.fullscreen(); }
+      if (e.code === 'ArrowRight') { v.currentTime += 10; }
+      if (e.code === 'ArrowLeft') { v.currentTime -= 10; }
+      if (e.code === 'KeyM') { v.muted = !v.muted; }
+    });
+  }
+
+  async load(movieId) {
+    this.movieId = movieId;
+    try {
+      this.show(this.elements.loading);
+      const info = await fetch(`${this.API}/stream/${movieId}/info`).then(r=>r.json());
+      const meta = await fetch(`${this.API}/movie/${movieId}`).then(r=>r.json());
+      this.elements.title.textContent = meta.title || 'Movie';
+      const year = meta.release_date ? new Date(meta.release_date).getFullYear() : '';
+      this.elements.meta.textContent = `${year} â€¢ ${info.qualities?.join(' / ') || ''}`;
+
+      const manifest = `${this.API}/stream/${movieId}/manifest.m3u8`;
+      await this.attachHLS(manifest);
+      if (this.autoplay) this.video.play().catch(()=>{});
+    } catch(e) {
+      this.fail('Failed to load video');
     }
+  }
 
-    setupVideoElement() {
-        if (!this.video) return;
-
-        // Basic video event listeners
-        this.video.addEventListener('loadedmetadata', () => {
-            this.duration = this.video.duration;
-            this.updateDurationDisplay();
-            this.hideLoading();
-        });
-
-        this.video.addEventListener('timeupdate', () => {
-            this.currentTime = this.video.currentTime;
-            this.updateProgress();
-        });
-
-        this.video.addEventListener('play', () => {
-            this.isPlaying = true;
-            this.updatePlayButtons();
-        });
-
-        this.video.addEventListener('pause', () => {
-            this.isPlaying = false;
-            this.updatePlayButtons();
-        });
-
-        this.video.addEventListener('ended', () => {
-            this.isPlaying = false;
-            this.updatePlayButtons();
-            this.showControls();
-        });
-
-        this.video.addEventListener('waiting', () => {
-            this.showLoading();
-        });
-
-        this.video.addEventListener('canplay', () => {
-            this.hideLoading();
-        });
-
-        this.video.addEventListener('error', (e) => {
-            console.error('Video error:', e);
-            this.showError('Video playback failed. Please try again.');
-        });
+  async attachHLS(manifestUrl) {
+    const v = this.video;
+    if (window.Hls?.isSupported()) {
+      this.hls?.destroy?.();
+      this.hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+      this.hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+        this.qualities = data.levels.map((lv, i) => ({
+          i, label: this.qLabel(lv.height), height: lv.height
+        }));
+        this.renderQMenu();
+      });
+      this.hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) this.fail('Streaming error');
+      });
+      this.hls.loadSource(manifestUrl);
+      this.hls.attachMedia(v);
+    } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+      v.src = manifestUrl;
+    } else {
+      this.fail('HLS not supported');
     }
+  }
 
-    setupHLS() {
-        if (!window.Hls) {
-            console.error('HLS.js not loaded');
-            this.showError('Video player not supported. Please update your browser.');
-            return;
-        }
+  renderQMenu() {
+    const q = this.elements.qmenu;
+    q.innerHTML = '';
+    const autoBtn = document.createElement('button');
+    autoBtn.className = 'ff-qitem active';
+    autoBtn.textContent = 'AUTO';
+    autoBtn.onclick = () => this.setQuality(-1, 'AUTO');
+    q.appendChild(autoBtn);
+    this.qualities.forEach(l => {
+      const b = document.createElement('button');
+      b.className = 'ff-qitem';
+      b.textContent = l.label;
+      b.onclick = () => this.setQuality(l.i, l.label);
+      q.appendChild(b);
+    });
+  }
 
-        if (Hls.isSupported()) {
-            this.hls = new Hls({
-                debug: false,
-                enableWorker: true,
-                lowLatencyMode: false,
-                backBufferLength: 90
-            });
+  setQuality(level, label) {
+    this.currentLevel = level;
+    if (this.hls) this.hls.currentLevel = level; // -1 auto
+    this.elements.quality.textContent = label;
+    this.hide(this.elements.qmenu);
+  }
 
-            this.hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-                console.log('ðŸŽ¬ HLS manifest loaded, qualities:', data.levels.length);
-                this.availableQualities = data.levels.map(level => ({
-                    height: level.height,
-                    bitrate: level.bitrate,
-                    label: this.getQualityLabel(level.height)
-                }));
-                this.populateQualityMenu();
-            });
+  toggleQMenu() {
+    this.elements.qmenu.classList.toggle('hidden');
+  }
 
-            this.hls.on(Hls.Events.ERROR, (event, data) => {
-                console.error('HLS error:', data);
-                if (data.fatal) {
-                    this.showError('Streaming error. Please check your connection.');
-                }
-            });
+  toggle() {
+    if (this.video.paused) { this.video.play(); this.elements.play.textContent = 'â¸'; this.elements.playbig.classList.add('hidden'); }
+    else { this.video.pause(); this.elements.play.textContent = 'â–¶'; this.elements.playbig.classList.remove('hidden'); }
+  }
 
-        } else if (this.video.canPlayType('application/vnd.apple.mpegurl')) {
-            // Native HLS support (Safari)
-            console.log('ðŸŽ¬ Using native HLS support');
-        } else {
-            this.showError('HLS streaming not supported in this browser.');
-        }
-    }
+  fullscreen() {
+    const el = this.container;
+    if (document.fullscreenElement) document.exitFullscreen();
+    else el.requestFullscreen?.();
+  }
 
-    async loadMovie(movieId) {
-        try {
-            this.showLoading();
+  updateDuration() { this.elements.dur.textContent = this.fmt(this.video.duration); }
+  updateProgress() {
+    const v = this.video;
+    const pct = (v.currentTime / (v.duration || 1)) * 100;
+    this.elements.played.style.width = pct + '%';
+    this.elements.cur.textContent = this.fmt(v.currentTime);
+  }
+  updateBuffer() {
+    const v = this.video; if (!v.buffered || v.buffered.length === 0) return;
+    const end = v.buffered.end(v.buffered.length - 1);
+    const pct = (end / (v.duration || 1)) * 100;
+    this.elements.buffer.style.width = pct + '%';
+  }
 
-            // Get video info
-            const videoInfo = await this.fetchVideoInfo(movieId);
-            if (!videoInfo.available) {
-                throw new Error('Video not available');
-            }
+  download() {
+    if (!this.movieId) return;
+    const a = document.createElement('a');
+    a.href = `${this.API}/download/${this.movieId}?quality=1080p`;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
 
-            // Load HLS manifest
-            const manifestUrl = `/api/stream/${movieId}/manifest.m3u8`;
+  toggleSubtitles() {
+    // Placeholder: add <track> with VTT if available
+    const existing = this.video.querySelector('track');
+    if (existing) { existing.remove(); return; }
+    const track = document.createElement('track');
+    track.kind = 'subtitles'; track.label = 'English'; track.srclang = 'en';
+    track.src = `/subtitles/${this.movieId}.vtt`;
+    track.default = true;
+    this.video.appendChild(track);
+  }
 
-            if (this.hls) {
-                this.hls.loadSource(manifestUrl);
-                this.hls.attachMedia(this.video);
-            } else {
-                // Native HLS
-                this.video.src = manifestUrl;
-            }
-
-            // Update UI with movie info
-            await this.updateMovieInfo(movieId);
-
-            if (this.autoplay) {
-                this.video.play();
-            }
-
-        } catch (error) {
-            console.error('Error loading movie:', error);
-            this.showError('Failed to load movie. Please try again.');
-        }
-    }
-
-    async fetchVideoInfo(movieId) {
-        const response = await fetch(`/api/stream/${movieId}/info`);
-        return await response.json();
-    }
-
-    async updateMovieInfo(movieId) {
-        try {
-            const response = await fetch(`/api/movie/${movieId}`);
-            const movieData = await response.json();
-
-            const titleEl = document.getElementById('player-movie-title');
-            const metaEl = document.getElementById('player-movie-meta');
-
-            if (titleEl) titleEl.textContent = movieData.title || 'Unknown Movie';
-            if (metaEl) {
-                const year = movieData.release_date ? new Date(movieData.release_date).getFullYear() : '';
-                const runtime = this.formatDuration(movieData.runtime * 60);
-                metaEl.textContent = `${year} â€¢ ${runtime}`;
-            }
-        } catch (error) {
-            console.error('Error fetching movie info:', error);
-        }
-    }
-
-    // ... (continued in next part due to length)
-
-    getQualityLabel(height) {
-        if (height >= 2160) return '4K';
-        if (height >= 1080) return '1080p';
-        if (height >= 720) return '720p';
-        if (height >= 480) return '480p';
-        return 'Auto';
-    }
-
-    formatDuration(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-
-        if (hours > 0) {
-            return `${hours}h ${minutes}m`;
-        }
-        return `${minutes}m`;
-    }
-
-    formatTime(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = Math.floor(seconds % 60);
-
-        if (hours > 0) {
-            return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-        return `${minutes}:${secs.toString().padStart(2, '0')}`;
-    }
-
-    showLoading() {
-        this.loading?.classList.remove('hidden');
-    }
-
-    hideLoading() {
-        this.loading?.classList.add('hidden');
-    }
-
-    showError(message) {
-        this.hideLoading();
-        this.error?.classList.remove('hidden');
-        const errorMessage = this.error?.querySelector('.error-message');
-        if (errorMessage) errorMessage.textContent = message;
-    }
-
-    hideError() {
-        this.error?.classList.add('hidden');
-    }
+  reload() { if (this.movieId) this.load(this.movieId); }
+  fmt(s) { if (!isFinite(s)) return '0:00'; const m = Math.floor(s/60), sec = Math.floor(s%60); return `${m}:${String(sec).padStart(2,'0')}`; }
+  qLabel(h) { if (h>=2160) return '4K'; if (h>=1080) return '1080p'; if (h>=720) return '720p'; if (h>=480) return '480p'; return 'AUTO'; }
+  show(el){ el?.classList?.remove('hidden'); }
+  hide(el){ el?.classList?.add('hidden'); }
+  fail(msg){ this.elements.errmsg.textContent = msg; this.show(this.elements.error); this.hide(this.elements.loading); }
 }
 
-// Export for use
 window.FilmyFeedPlayer = FilmyFeedPlayer;
