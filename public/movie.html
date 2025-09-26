@@ -5,37 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Details - FilmyFeed</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="movie.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        .movie-details { padding: 2rem 0; }
+        .movie-header { display: flex; gap: 2rem; margin-bottom: 2rem; }
+        .movie-poster { max-width: 300px; border-radius: 10px; }
+        .movie-info { flex: 1; }
+        .movie-title { font-size: 2.5rem; margin-bottom: 1rem; }
+        .movie-meta { display: flex; gap: 1rem; margin: 1rem 0; }
+        .meta-item { background: var(--card-bg); padding: 0.5rem 1rem; border-radius: 20px; }
+        .cast-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; margin-top: 2rem; }
+        .cast-card { background: var(--card-bg); border-radius: 8px; padding: 1rem; text-align: center; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 2rem auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .retry-btn { background: var(--accent); color: white; border: none; padding: 1rem 2rem; border-radius: 5px; cursor: pointer; margin-top: 1rem; }
+        @media (max-width: 768px) { .movie-header { flex-direction: column; } .movie-poster { max-width: 250px; margin: 0 auto; } }
+    </style>
 </head>
 <body>
     <header>
         <div class="container">
-            <div class="logo" aria-label="FilmyFeed">
-                <img src="logo.png" alt="FilmyFeed Logo" onerror="this.style.display='none'">
+            <div class="logo">
                 <h1>FilmyFeed</h1>
             </div>
-            <nav>
-                <a href="/" class="nav-link">Home</a>
+            <nav style="margin-top: 1rem;">
+                <a href="/" style="color: var(--text); text-decoration: none; padding: 0.5rem 1rem; background: var(--accent); border-radius: 5px;">← Home</a>
             </nav>
         </div>
     </header>
+
     <main>
         <div class="container">
-            <div id="loading" class="loading" role="status" aria-live="polite">
+            <!-- Loading State -->
+            <div id="loading" class="loading">
                 <div class="spinner"></div>
-                Loading movie...
+                <p style="text-align: center;">Loading movie details...</p>
             </div>
-            <div id="error" class="error hidden" role="alert">
-                <h2>Error loading movie</h2>
-                <p id="error-message">Something went wrong. Please try again later.</p>
+            
+            <!-- Error State -->
+            <div id="error" class="error hidden" style="text-align: center; padding: 2rem;">
+                <h2 style="color: var(--error);">Error Loading Movie</h2>
+                <p id="error-message">Something went wrong. Please try again.</p>
                 <button id="retry-btn" class="retry-btn">Try Again</button>
             </div>
+
+            <!-- Movie Details -->
             <div id="movie-details" class="movie-details hidden">
-                <!-- (rest of page content, use design above) -->
+                <div class="movie-header">
+                    <img id="movie-poster" class="movie-poster" alt="Movie Poster">
+                    <div class="movie-info">
+                        <h1 id="movie-title" class="movie-title"></h1>
+                        <p id="movie-tagline" style="font-style: italic; color: #aaa; margin-bottom: 1rem;"></p>
+                        
+                        <div class="movie-meta">
+                            <span id="movie-year" class="meta-item"></span>
+                            <span id="movie-runtime" class="meta-item"></span>
+                            <span id="movie-rating" class="meta-item"></span>
+                        </div>
+                        
+                        <div id="movie-genres" style="display: flex; gap: 0.5rem; margin: 1rem 0;"></div>
+                        
+                        <div class="movie-overview">
+                            <h3>Overview</h3>
+                            <p id="movie-description"></p>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-top: 2rem;">
+                            <div style="background: var(--card-bg); padding: 1rem; border-radius: 8px; text-align: center;">
+                                <span style="display: block; font-size: 0.8rem; color: #aaa;">Rating</span>
+                                <span id="vote-average" style="display: block; font-weight: bold; font-size: 1.2rem;"></span>
+                            </div>
+                            <div style="background: var(--card-bg); padding: 1rem; border-radius: 8px; text-align: center;">
+                                <span style="display: block; font-size: 0.8rem; color: #aaa;">Votes</span>
+                                <span id="vote-count" style="display: block; font-weight: bold; font-size: 1.2rem;"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="movie-cast">
+                    <h3>Cast</h3>
+                    <div id="cast-grid" class="cast-grid"></div>
+                </div>
             </div>
         </div>
     </main>
+
     <script src="movie.js"></script>
 </body>
 </html>
