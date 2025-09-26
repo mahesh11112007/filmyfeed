@@ -35,4 +35,4 @@
 .trailer-frame-wrapper { position:relative; width:100%; padding-top:56.25%; }
 .trailer-frame-wrapper iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
 .hidden { display:none !important; }
-@media (min-width:768px){ .movie-poster{width:160px;height:240px} .hero-play-btn{width:100px;height:100px} .related-card{width:140px} .related-card .card-poster{height:210px} }
+@media (min-width:768px){ .movie-poster{width:160px;height:240px} .hero-play-btn{width:100px;height:100px} .related-card{width:140px} .related-card .card-poster{height:210px} } 
