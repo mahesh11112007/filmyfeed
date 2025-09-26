@@ -1,39 +1,21 @@
 {
-  "name": "filmyfeed-professional",
-  "version": "2.0.0",
-  "description": "Professional movie discovery platform with YouTube trailers and TMDb API",
+  "name": "filmyfeed",
+  "version": "1.0.0",
+  "description": "Netflix-style streaming platform",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "build": "echo \"No build step required\"",
-    "vercel-build": "echo \"Vercel build complete\""
+    "dev": "nodemon server.js"
   },
   "dependencies": {
+    "express": "^4.18.2",
     "axios": "^1.6.0",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2"
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
-  "keywords": [
-    "movies",
-    "cinema",
-    "trailers",
-    "tmdb",
-    "entertainment",
-    "film-discovery",
-    "professional"
-  ],
-  "author": "FilmyFeed Team",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/filmyfeed/professional"
+    "node": ">=18.0.0"
   }
 }
