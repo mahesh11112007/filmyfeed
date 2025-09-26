@@ -1,3 +1,7 @@
+// Main Page JavaScript - Fixed for Vercel API
+
+console.log('Main script loaded');
+
 // DOM Elements
 const moviesGrid = document.getElementById('movies-grid');
 const searchInput = document.getElementById('search-input');
@@ -13,7 +17,7 @@ let isSearching = false;
 let currentQuery = '';
 const IMG_BASE = 'https://image.tmdb.org/t/p/w500';
 
-// Fetch movies via local proxy
+// Fetch movies via API
 async function fetchMovies(endpoint, params = {}) {
     const url = new URL(`/api/${endpoint}`, window.location.origin);
     
@@ -25,12 +29,25 @@ async function fetchMovies(endpoint, params = {}) {
 
     try {
         showLoading();
+        console.log('Fetching from:', url.toString());
+        
         const res = await fetch(url.toString());
-        if (!res.ok) throw new Error('Network response was not ok');
-        const data = await res.json();
-        return data;
+        
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        
+        const result = await res.json();
+        console.log('API Response:', result);
+        
+        if (!result.success) {
+            throw new Error(result.error || 'API returned error');
+        }
+        
+        return result.data;
     } catch (err) {
-        showError('Failed to fetch movies. Please try again later.');
+        console.error('Fetch error:', err);
+        showError(`Failed to fetch movies: ${err.message}`);
         return null;
     } finally {
         hideLoading();
@@ -67,7 +84,7 @@ function renderMovies(movies) {
                     <div class="movie-info">
                         <h3 class="movie-title" title="${escapeHtml(title)}">${escapeHtml(title)}</h3>
                         <div class="movie-date">${escapeHtml(date)}</div>
-                        <div class="movie-rating">â­ ${rating}</div>
+                        <div class="movie-rating">⭐ ${rating}</div>
                     </div>
                 </div>
             `;
@@ -106,12 +123,10 @@ moviesGrid.addEventListener('click', (e) => {
     const card = e.target.closest('.movie-card');
     if (card) {
         const movieId = card.dataset.id;
-        // Navigate to movie details page
         window.location.href = `/movie.html?id=${movieId}`;
     }
 });
 
-// Handle keyboard navigation for movie cards
 moviesGrid.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
         const card = e.target.closest('.movie-card');
@@ -124,19 +139,16 @@ moviesGrid.addEventListener('keydown', (e) => {
 });
 
 searchBtn.addEventListener('click', handleSearch);
-
 searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleSearch();
 });
 
-// Handle browser back/forward buttons
 window.addEventListener('popstate', handleUrlParams);
 
 function handleSearch() {
     const query = searchInput.value.trim();
     
     if (!query) {
-        // If search is empty, go back to now playing
         currentQuery = '';
         isSearching = false;
         updateUrl();
@@ -151,7 +163,6 @@ function handleSearch() {
     loadSearchResults();
 }
 
-// Loaders
 function loadNowPlaying() {
     isSearching = false;
     pageTitle.textContent = 'Now Playing';
@@ -159,10 +170,9 @@ function loadNowPlaying() {
 }
 
 async function fetchAndRenderNowPlaying() {
-    // Fetch multiple pages to get more variety
     const [page1, page2] = await Promise.all([
-        fetchMovies('movie/now_playing', { page: 1, language: 'en-US', region: 'IN' }),
-        fetchMovies('movie/now_playing', { page: 2, language: 'en-US', region: 'IN' })
+        fetchMovies('nowplaying', { page: 1 }),
+        fetchMovies('nowplaying', { page: 2 })
     ]);
 
     const allMovies = [
@@ -176,11 +186,9 @@ async function fetchAndRenderNowPlaying() {
 async function loadSearchResults() {
     pageTitle.textContent = `Search Results for "${currentQuery}"`;
     
-    const data = await fetchMovies('search/movie', {
+    const data = await fetchMovies('search', {
         query: currentQuery,
-        page: currentPage,
-        include_adult: false,
-        language: 'en-US'
+        page: currentPage
     });
 
     renderMovies(data?.results || []);
@@ -198,6 +206,7 @@ function hideLoading() {
 }
 
 function showError(message) {
+    console.error('Error:', message);
     errorEl.textContent = message;
     errorEl.classList.remove('hidden');
     loadingEl.classList.add('hidden');
@@ -232,4 +241,7 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Initialize
-document.addEventListener('DOMContentLoaded', handleUrlParams);
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing app...');
+    handleUrlParams();
+});
