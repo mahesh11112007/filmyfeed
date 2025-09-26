@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#000000">
-    <meta name="description" content="FilmyFeed - Professional streaming platform for movies and shows">
+    <meta name="description" content="FilmyFeed - Netflix-style streaming platform">
     <title>FilmyFeed - Stream Movies & Shows</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -31,7 +31,6 @@
                     </div>
                 </button>
                 <div class="brand-logo">
-                    <img src="logo.png" alt="FilmyFeed" class="logo-img" onerror="this.style.display='none'">
                     <span class="brand-text">FILMYFEED</span>
                 </div>
             </div>
@@ -55,8 +54,8 @@
                         <path d="M21.53 20.47L17.689 16.629A8.5 8.5 0 1 0 16.629 17.689L20.47 21.53a.75.75 0 1 0 1.06-1.06zM3.5 10.5a7 7 0 1 1 14 0 7 7 0 0 1-14 0z"/>
                     </svg>
                     <input type="search" id="search-input" class="search-input" 
-                           placeholder="Search movies, shows..." autocomplete="off" autocapitalize="none">
-                    <button class="search-close" id="search-close" aria-label="Close search">
+                           placeholder="Search movies, shows..." autocomplete="off">
+                    <button class="search-close" id="search-close" aria-label="Close">
                         <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M6 6l12 12M6 18L18 6"/>
                         </svg>
@@ -80,7 +79,7 @@
                         <span class="genre">Entertainment</span>
                     </div>
                     <p id="hero-description" class="hero-description">
-                        Stream the latest movies and TV shows in high quality. Discover your next favorite film.
+                        Stream the latest movies and TV shows in high quality.
                     </p>
                     <div class="hero-actions">
                         <button class="play-btn" id="hero-play-btn">
@@ -102,6 +101,20 @@
 
         <!-- Content Sections -->
         <div class="content-wrapper">
+            <!-- Custom Local Movies -->
+            <section class="content-section" id="local-movies-section">
+                <div class="section-header">
+                    <h2 class="section-title">Our Movies</h2>
+                    <button class="see-all-btn">See All</button>
+                </div>
+                <div class="content-row" id="local-movies-row">
+                    <div class="loading-placeholder">
+                        <div class="loading-spinner"></div>
+                        <span>Loading movies...</span>
+                    </div>
+                </div>
+            </section>
+
             <!-- Featured Titles -->
             <section class="content-section">
                 <div class="section-header">
@@ -136,29 +149,9 @@
                     <h2 class="section-title" id="search-results-title">Search Results</h2>
                 </div>
                 <div class="search-grid" id="search-results-grid">
-                    <!-- Search results populated here -->
+                    <!-- Results here -->
                 </div>
             </section>
-
-            <!-- Status Messages -->
-            <div id="loading-status" class="status-message hidden">
-                <div class="loading-spinner"></div>
-                <span>Loading content...</span>
-            </div>
-
-            <div id="error-status" class="status-message error hidden">
-                <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                </svg>
-                <span>Failed to load content. Tap to retry.</span>
-            </div>
-
-            <div id="no-results-status" class="status-message hidden">
-                <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                </svg>
-                <span>No results found. Try a different search.</span>
-            </div>
         </div>
     </main>
 
