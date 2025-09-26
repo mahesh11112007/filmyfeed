@@ -1,6 +1,6 @@
 /**
- * FilmyFeed Movie Details Page
- * Supports both local JSON movies and TMDb movies
+ * FilmyFeed Movie Details Page - CORRECTED
+ * Properly handles both local JSON movies and TMDb movies
  */
 
 class MovieDetailsApp {
@@ -67,14 +67,18 @@ class MovieDetailsApp {
         this.extractParams();
         await this.loadLocalMovies();
 
+        // CORRECTED: Properly determine movie type and load details
         if (this.localId) {
+            console.log('Loading local movie:', this.localId);
             this.isLocalMovie = true;
             await this.loadLocalMovieDetails();
         } else if (this.movieId) {
+            console.log('Loading TMDb movie:', this.movieId);
             this.isLocalMovie = false;
             await this.loadTMDbMovieDetails();
         } else {
-            this.showError('Movie not found');
+            console.error('No movie ID found in URL');
+            this.showError('Movie not found. Please check the URL.');
         }
     }
 
@@ -82,6 +86,7 @@ class MovieDetailsApp {
         try {
             const response = await fetch('/data/movies.json');
             this.localMovies = await response.json();
+            console.log(`ðŸ“± Loaded ${this.localMovies.length} local movies for details page`);
         } catch (error) {
             console.log('No local movies.json found');
             this.localMovies = [];
@@ -95,7 +100,7 @@ class MovieDetailsApp {
         });
 
         this.elements.searchBtn?.addEventListener('click', () => {
-            window.location.href = '/?search=true';
+            window.location.href = 'index.html';
         });
 
         this.elements.shareBtn?.addEventListener('click', () => {
@@ -151,9 +156,9 @@ class MovieDetailsApp {
                 const tmdbId = relatedCard.dataset.id;
 
                 if (localId) {
-                    window.location.href = `/movie.html?localId=${encodeURIComponent(localId)}`;
+                    window.location.href = `movie.html?localId=${encodeURIComponent(localId)}`;
                 } else if (tmdbId) {
-                    window.location.href = `/movie.html?id=${encodeURIComponent(tmdbId)}`;
+                    window.location.href = `movie.html?id=${encodeURIComponent(tmdbId)}`;
                 }
             }
         });
@@ -163,25 +168,40 @@ class MovieDetailsApp {
         const urlParams = new URLSearchParams(window.location.search);
         this.localId = urlParams.get('localId');
         this.movieId = urlParams.get('id');
+
+        console.log('URL params extracted:', { localId: this.localId, movieId: this.movieId });
     }
 
     async loadLocalMovieDetails() {
         this.showLoading();
 
         try {
-            const movie = this.localMovies.find(m => m.id === this.localId);
+            // Find the local movie by ID
+            const movie = this.localMovies.find(m => 
+                String(m.id) === String(this.localId) || 
+                m.movie === this.localId
+            );
+
             if (!movie) {
-                throw new Error('Local movie not found');
+                throw new Error(`Local movie not found: ${this.localId}`);
             }
 
-            this.movieData = movie;
-            this.renderLocalMovieDetails();
+            console.log('Found local movie:', movie);
+
+            // Enrich with TMDb data if ID is available
+            if (movie.id && typeof movie.id === 'number') {
+                this.movieData = await this.enrichWithTMDb(movie);
+            } else {
+                this.movieData = movie;
+            }
+
+            this.renderMovieDetails();
             this.updatePageTitle();
             this.showContent();
 
         } catch (error) {
             console.error('Error loading local movie:', error);
-            this.showError('Failed to load movie details. Tap to retry.');
+            this.showError(`Failed to load movie details: ${error.message}`);
         }
     }
 
@@ -198,93 +218,84 @@ class MovieDetailsApp {
             this.movieData = movieResponse;
             this.creditsData = creditsResponse;
 
-            this.renderTMDbMovieDetails();
+            this.renderMovieDetails();
             this.renderSimilarMovies(similarResponse.results || []);
             this.updatePageTitle();
             this.showContent();
 
         } catch (error) {
             console.error('Error loading TMDb movie:', error);
-            this.showError('Failed to load movie details. Tap to retry.');
+            this.showError('Failed to load movie details from TMDb. Check your API key.');
         }
     }
 
-    renderLocalMovieDetails() {
+    // TMDb Enrichment Function (same as in script.js)
+    async enrichWithTMDb(minItem) {
+        if (!minItem.id) return minItem;
+
+        try {
+            const [details, credits] = await Promise.all([
+                this.fetchFromAPI(`movie/${minItem.id}`),
+                this.fetchFromAPI(`movie/${minItem.id}/credits`)
+            ]);
+
+            return {
+                ...minItem,
+                title: details.title || minItem.movie,
+                year: details.release_date ? new Date(details.release_date).getFullYear() : undefined,
+                language: details.original_language?.toUpperCase(),
+                rating: typeof details.vote_average === 'number' ? details.vote_average.toFixed(1) : undefined,
+                runtime: details.runtime,
+                poster: details.poster_path ? `${this.IMG_BASE}${details.poster_path}` : undefined,
+                backdrop: details.backdrop_path ? `${this.BACKDROP_BASE}${details.backdrop_path}` : undefined,
+                overview: details.overview,
+                genres: (details.genres || []).map(g => g.name),
+                cast: (credits.cast || []).slice(0, 5).map(p => p.name),
+                director: (credits.crew || []).find(p => p.job === 'Director')?.name,
+                // Store credits for later use
+                _tmdbDetails: details,
+                _tmdbCredits: credits
+            };
+        } catch (e) {
+            console.log('TMDb enrichment failed for', minItem.movie || minItem.id, e);
+            return minItem;
+        }
+    }
+
+    renderMovieDetails() {
         if (!this.movieData) return;
 
+        console.log('Rendering movie details:', this.movieData);
+
         // Hero backdrop
-        if (this.movieData.backdrop && this.elements.movieBackdrop) {
-            this.elements.movieBackdrop.style.backgroundImage = `url(${this.movieData.backdrop})`;
+        const backdropUrl = this.isLocalMovie ? 
+            (this.movieData.backdrop || (this.movieData.backdrop_path ? `${this.BACKDROP_BASE}${this.movieData.backdrop_path}` : null)) :
+            (this.movieData.backdrop_path ? `${this.BACKDROP_BASE}${this.movieData.backdrop_path}` : null);
+
+        if (backdropUrl && this.elements.movieBackdrop) {
+            this.elements.movieBackdrop.style.backgroundImage = `url(${backdropUrl})`;
         }
 
         // Movie poster
-        if (this.movieData.poster && this.elements.moviePoster) {
-            this.elements.moviePoster.src = this.movieData.poster;
-            this.elements.moviePoster.alt = `${this.movieData.title} poster`;
+        const posterUrl = this.isLocalMovie ? 
+            (this.movieData.poster || (this.movieData.poster_path ? `${this.IMG_BASE}${this.movieData.poster_path}` : null)) :
+            (this.movieData.poster_path ? `${this.IMG_BASE}${this.movieData.poster_path}` : null);
+
+        if (posterUrl && this.elements.moviePoster) {
+            this.elements.moviePoster.src = posterUrl;
+            this.elements.moviePoster.alt = `${this.movieData.title || this.movieData.movie} poster`;
         }
 
         // Basic info
         if (this.elements.movieTitle) {
-            this.elements.movieTitle.textContent = this.movieData.title || 'Untitled';
+            this.elements.movieTitle.textContent = this.movieData.title || this.movieData.movie || 'Untitled';
         }
 
         // Meta information
-        if (this.elements.movieMeta) {
-            const metaParts = [];
-            if (this.movieData.year) metaParts.push(this.movieData.year);
-            if (this.movieData.language) metaParts.push(this.movieData.language.toUpperCase());
-            if (this.movieData.rating) metaParts.push(`â˜… ${this.movieData.rating}`);
-            this.elements.movieMeta.textContent = metaParts.join(' â€¢ ');
-        }
+        this.renderMovieMeta();
 
         // Genres
-        if (this.elements.movieGenres && this.movieData.genres) {
-            const genresHTML = this.movieData.genres
-                .slice(0, 3)
-                .map(genre => `<span class="genre-tag">${this.escapeHtml(genre)}</span>`)
-                .join('');
-            this.elements.movieGenres.innerHTML = genresHTML;
-        }
-
-        // Overview
-        if (this.elements.movieOverview) {
-            this.elements.movieOverview.textContent = 
-                this.movieData.overview || this.movieData.description || 'No description available.';
-        }
-
-        // Movie details
-        this.renderLocalMovieInfo();
-
-        // Related movies (show other local movies)
-        const otherMovies = this.localMovies.filter(m => m.id !== this.localId).slice(0, 6);
-        this.renderRelatedMovies(otherMovies, true);
-    }
-
-    renderTMDbMovieDetails() {
-        if (!this.movieData) return;
-
-        // Hero backdrop
-        if (this.movieData.backdrop_path && this.elements.movieBackdrop) {
-            this.elements.movieBackdrop.style.backgroundImage = 
-                `url(${this.BACKDROP_BASE}${this.movieData.backdrop_path})`;
-        }
-
-        // Movie poster
-        if (this.movieData.poster_path && this.elements.moviePoster) {
-            this.elements.moviePoster.src = `${this.IMG_BASE}${this.movieData.poster_path}`;
-            this.elements.moviePoster.alt = `${this.movieData.title} poster`;
-        }
-
-        // Basic info
-        if (this.elements.movieTitle) {
-            this.elements.movieTitle.textContent = this.movieData.title || 'Untitled';
-        }
-
-        // Meta information
-        this.renderTMDbMovieMeta();
-
-        // Genres
-        this.renderTMDbGenres();
+        this.renderGenres();
 
         // Overview
         if (this.elements.movieOverview) {
@@ -293,24 +304,32 @@ class MovieDetailsApp {
         }
 
         // Movie details
-        this.renderTMDbMovieInfo();
+        this.renderMovieInfo();
 
-        // Cast & Crew
+        // Cast & Crew (for enriched local movies or TMDb movies)
         this.renderCastCrew();
+
+        // Related movies (for local movies, show other local movies)
+        if (this.isLocalMovie) {
+            const otherMovies = this.localMovies.filter(m => m.id !== this.localId).slice(0, 6);
+            this.renderRelatedMovies(otherMovies, true);
+        }
     }
 
-    renderTMDbMovieMeta() {
+    renderMovieMeta() {
         if (!this.elements.movieMeta) return;
 
-        const year = this.movieData.release_date 
-            ? new Date(this.movieData.release_date).getFullYear() 
-            : '';
+        const year = this.isLocalMovie ? 
+            (this.movieData.year || (this.movieData.release_date ? new Date(this.movieData.release_date).getFullYear() : '')) :
+            (this.movieData.release_date ? new Date(this.movieData.release_date).getFullYear() : '');
 
-        const rating = typeof this.movieData.vote_average === 'number' 
-            ? this.movieData.vote_average.toFixed(1) 
-            : 'N/A';
+        const rating = this.isLocalMovie ? 
+            (this.movieData.rating || (typeof this.movieData.vote_average === 'number' ? this.movieData.vote_average.toFixed(1) : 'N/A')) :
+            (typeof this.movieData.vote_average === 'number' ? this.movieData.vote_average.toFixed(1) : 'N/A');
 
-        const language = (this.movieData.original_language || '').toUpperCase();
+        const language = this.isLocalMovie ? 
+            (this.movieData.language || this.movieData.original_language || '').toUpperCase() :
+            (this.movieData.original_language || '').toUpperCase();
 
         const metaParts = [];
         if (year) metaParts.push(year);
@@ -320,21 +339,32 @@ class MovieDetailsApp {
         this.elements.movieMeta.textContent = metaParts.join(' â€¢ ');
     }
 
-    renderTMDbGenres() {
-        if (!this.elements.movieGenres || !this.movieData.genres) return;
+    renderGenres() {
+        if (!this.elements.movieGenres) return;
 
-        const genresHTML = this.movieData.genres
-            .slice(0, 3)
-            .map(genre => `<span class="genre-tag">${this.escapeHtml(genre.name)}</span>`)
-            .join('');
+        let genres = [];
+        if (this.isLocalMovie && this.movieData.genres) {
+            genres = this.movieData.genres;
+        } else if (!this.isLocalMovie && this.movieData.genres) {
+            genres = this.movieData.genres.map(g => g.name || g);
+        }
 
-        this.elements.movieGenres.innerHTML = genresHTML;
+        if (genres.length > 0) {
+            const genresHTML = genres
+                .slice(0, 3)
+                .map(genre => `<span class="genre-tag">${this.escapeHtml(genre)}</span>`)
+                .join('');
+            this.elements.movieGenres.innerHTML = genresHTML;
+        }
     }
 
-    renderLocalMovieInfo() {
+    renderMovieInfo() {
         // Release date
         if (this.elements.movieRelease) {
-            this.elements.movieRelease.textContent = this.movieData.year || 'Not available';
+            const releaseDate = this.isLocalMovie ? 
+                (this.movieData.year || (this.movieData.release_date ? this.formatDate(this.movieData.release_date) : 'Not available')) :
+                (this.movieData.release_date ? this.formatDate(this.movieData.release_date) : 'Not available');
+            this.elements.movieRelease.textContent = releaseDate;
         }
 
         // Runtime
@@ -345,66 +375,44 @@ class MovieDetailsApp {
 
         // Language
         if (this.elements.movieLanguage) {
-            this.elements.movieLanguage.textContent = 
-                this.movieData.language?.toUpperCase() || 'Not available';
-        }
-
-        // Rating
-        if (this.elements.movieRating) {
-            this.elements.movieRating.textContent = 
-                this.movieData.rating ? `${this.movieData.rating}/10` : 'Not available';
-        }
-    }
-
-    renderTMDbMovieInfo() {
-        // Release date
-        if (this.elements.movieRelease) {
-            this.elements.movieRelease.textContent = 
-                this.formatDate(this.movieData.release_date);
-        }
-
-        // Runtime
-        if (this.elements.movieRuntime) {
-            this.elements.movieRuntime.textContent = 
-                this.formatRuntime(this.movieData.runtime);
-        }
-
-        // Language
-        if (this.elements.movieLanguage) {
-            const language = this.movieData.spoken_languages?.[0]?.english_name || 
-                           (this.movieData.original_language || '').toUpperCase() || 
-                           'Unknown';
+            const language = this.isLocalMovie ? 
+                (this.movieData.language?.toUpperCase() || this.movieData.original_language?.toUpperCase() || 'Not available') :
+                (this.movieData.spoken_languages?.[0]?.english_name || 
+                 (this.movieData.original_language || '').toUpperCase() || 
+                 'Unknown');
             this.elements.movieLanguage.textContent = language;
         }
 
         // Rating
         if (this.elements.movieRating) {
-            const rating = typeof this.movieData.vote_average === 'number' 
-                ? `${this.movieData.vote_average.toFixed(1)}/10` 
-                : 'N/A';
+            const rating = this.isLocalMovie ? 
+                (this.movieData.rating ? `${this.movieData.rating}/10` : 
+                 (typeof this.movieData.vote_average === 'number' ? `${this.movieData.vote_average.toFixed(1)}/10` : 'N/A')) :
+                (typeof this.movieData.vote_average === 'number' ? `${this.movieData.vote_average.toFixed(1)}/10` : 'N/A');
             this.elements.movieRating.textContent = rating;
         }
     }
 
     renderCastCrew() {
-        if (!this.creditsData) return;
-
         // Director
         if (this.elements.movieDirector) {
-            const director = this.creditsData.crew?.find(person => person.job === 'Director');
-            this.elements.movieDirector.textContent = director ? director.name : 'Not available';
+            const director = this.isLocalMovie ? 
+                (this.movieData.director || 
+                 (this.movieData._tmdbCredits?.crew?.find(person => person.job === 'Director')?.name)) :
+                (this.creditsData?.crew?.find(person => person.job === 'Director')?.name);
+            this.elements.movieDirector.textContent = director || 'Not available';
         }
 
-        // Cast (top 5)
+        // Cast
         if (this.elements.movieCast) {
-            const topCast = this.creditsData.cast?.slice(0, 5) || [];
-            const castNames = topCast.map(person => person.name).join(', ');
-            this.elements.movieCast.textContent = castNames || 'Not available';
-        }
-    }
+            const cast = this.isLocalMovie ? 
+                (this.movieData.cast || 
+                 (this.movieData._tmdbCredits?.cast?.slice(0, 5).map(person => person.name))) :
+                (this.creditsData?.cast?.slice(0, 5).map(person => person.name) || []);
 
-    renderSimilarMovies(movies) {
-        this.renderRelatedMovies(movies, false);
+            const castText = Array.isArray(cast) ? cast.join(', ') : (cast || 'Not available');
+            this.elements.movieCast.textContent = castText;
+        }
     }
 
     renderRelatedMovies(movies, isLocal) {
@@ -420,12 +428,18 @@ class MovieDetailsApp {
         this.elements.relatedMovies.innerHTML = moviesHTML;
     }
 
+    renderSimilarMovies(movies) {
+        this.renderRelatedMovies(movies, false);
+    }
+
     createRelatedCard(movie, isLocal) {
-        const posterUrl = isLocal ? movie.poster : 
+        const posterUrl = isLocal ? 
+            (movie.poster || (movie.poster_path ? `${this.IMG_BASE}${movie.poster_path}` : null)) :
             (movie.poster_path ? `${this.IMG_BASE}${movie.poster_path}` : null);
 
-        const title = this.escapeHtml(movie.title || 'Untitled');
-        const year = isLocal ? movie.year : 
+        const title = this.escapeHtml(movie.title || movie.movie || 'Untitled');
+        const year = isLocal ? 
+            (movie.year || (movie.release_date ? new Date(movie.release_date).getFullYear() : '')) :
             (movie.release_date ? new Date(movie.release_date).getFullYear() : '');
 
         const dataAttribute = isLocal ? `data-local-id="${movie.id}"` : `data-id="${movie.id}"`;
@@ -447,9 +461,9 @@ class MovieDetailsApp {
     // Action Functions
     playMovie() {
         if (this.isLocalMovie && this.localId) {
-            window.location.href = `/watch.html?localId=${encodeURIComponent(this.localId)}`;
+            window.location.href = `watch.html?localId=${encodeURIComponent(this.localId)}`;
         } else if (this.movieId) {
-            window.location.href = `/watch.html?id=${encodeURIComponent(this.movieId)}`;
+            window.location.href = `watch.html?id=${encodeURIComponent(this.movieId)}`;
         }
     }
 
@@ -480,7 +494,7 @@ class MovieDetailsApp {
     }
 
     downloadMovie() {
-        if (this.isLocalMovie && this.movieData.download) {
+        if (this.isLocalMovie && this.movieData && this.movieData.download) {
             window.open(this.movieData.download, '_blank');
             this.showNotification('Download started');
         } else if (this.movieId) {
@@ -503,75 +517,4 @@ class MovieDetailsApp {
                 (video.type === 'Trailer' || video.type === 'Teaser')
             );
 
-            return youtubeVideo?.key || null;
-        } catch (error) {
-            console.error('Error fetching trailer:', error);
-            return null;
-        }
-    }
-
-    openTrailer(youtubeKey) {
-        const movieTitle = this.movieData?.title || 'Movie';
-        this.elements.trailerTitle.textContent = `${movieTitle} - Trailer`;
-        this.elements.trailerIframe.src = 
-            `https://www.youtube.com/embed/${youtubeKey}?autoplay=1&rel=0`;
-        this.elements.trailerModal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-
-    closeTrailer() {
-        this.elements.trailerIframe.src = '';
-        this.elements.trailerModal.classList.add('hidden');
-        document.body.style.overflow = '';
-    }
-
-    toggleMyList() {
-        const isAdded = this.elements.addListBtn.classList.toggle('added');
-
-        if (isAdded) {
-            this.elements.addListBtn.innerHTML = 'âœ“';
-            this.showNotification('Added to My List');
-        } else {
-            this.elements.addListBtn.innerHTML = 'ï¼‹';
-            this.showNotification('Removed from My List');
-        }
-    }
-
-    shareMovie() {
-        if (navigator.share && this.movieData) {
-            navigator.share({
-                title: this.movieData.title,
-                text: `Check out ${this.movieData.title} on FilmyFeed!`,
-                url: window.location.href
-            }).catch(console.error);
-        } else {
-            navigator.clipboard.writeText(window.location.href).then(() => {
-                this.showNotification('Link copied to clipboard!');
-            }).catch(() => {
-                this.showNotification('Share feature not supported');
-            });
-        }
-    }
-
-    goBack() {
-        if (window.history.length > 1) {
-            window.history.back();
-        } else {
-            window.location.href = '/';
-        }
-    }
-
-    // UI State Functions
-    showLoading() {
-        this.elements.movieLoading?.classList.remove('hidden');
-        this.elements.movieError?.classList.add('hidden');
-        this.elements.movieContent?.classList.add('hidden');
-    }
-
-    showError(message) {
-        const span = this.elements.movieError?.querySelector('span');
-        if (span) span.textContent = message;
-
-        this.elements.movieLoading?.classList.add('hidden');
-        this.elements.movieError?.classList.remove('hidden');
-        t
+            return youtubeVideo?.key 
