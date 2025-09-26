@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,7 +15,7 @@ const CDN_BASE_URL = process.env.CDN_BASE_URL || 'https://cdn.filmyfeed.com';
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// CORS headers for streaming
+// CORS headers for all requests
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Range');
@@ -34,11 +35,9 @@ app.use((req, res, next) => {
 app.get('/api/stream/:movieId/manifest.m3u8', async (req, res) => {
     try {
         const { movieId } = req.params;
-        const quality = req.query.quality || 'auto';
-
         console.log(`ðŸŽ¬ HLS manifest request for movie ${movieId}`);
 
-        const manifest = generateHLSMasterPlaylist(movieId, quality);
+        const manifest = generateHLSMasterPlaylist(movieId);
 
         res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
         res.setHeader('Cache-Control', 'public, max-age=300');
@@ -55,7 +54,6 @@ app.get('/api/stream/:movieId/manifest.m3u8', async (req, res) => {
 app.get('/api/stream/:movieId/:quality/index.m3u8', async (req, res) => {
     try {
         const { movieId, quality } = req.params;
-
         console.log(`ðŸŽ¬ Quality playlist: ${quality} for movie ${movieId}`);
 
         const playlist = generateQualityPlaylist(movieId, quality);
@@ -71,24 +69,20 @@ app.get('/api/stream/:movieId/:quality/index.m3u8', async (req, res) => {
     }
 });
 
-// Video segment proxy (streams from CDN/storage)
+// Video segment proxy
 app.get('/api/stream/:movieId/:quality/segment:segmentId.ts', async (req, res) => {
     try {
         const { movieId, quality, segmentId } = req.params;
-        const cdnUrl = `${CDN_BASE_URL}/videos/${movieId}/${quality}/segment${segmentId}.ts`;
+        console.log(`ðŸŽ¬ Streaming segment: ${movieId}/${quality}/segment${segmentId}.ts`);
 
-        console.log(`ðŸŽ¬ Streaming segment: ${cdnUrl}`);
-
-        // In production, this would proxy to your CDN/storage
-        // For demo, we'll return a mock response
+        // Mock segment for demo - in production, proxy to your CDN
         res.setHeader('Content-Type', 'video/MP2T');
-        res.setHeader('Content-Length', '1048576'); // 1MB mock
+        res.setHeader('Content-Length', '1048576');
         res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Cache-Control', 'public, max-age=86400');
         res.setHeader('Access-Control-Allow-Origin', '*');
 
-        // Mock video segment data
-        const mockSegment = Buffer.alloc(1048576, 0x47); // TS sync byte pattern
+        const mockSegment = Buffer.alloc(1048576, 0x47);
         res.send(mockSegment);
 
     } catch (error) {
@@ -97,7 +91,7 @@ app.get('/api/stream/:movieId/:quality/segment:segmentId.ts', async (req, res) =
     }
 });
 
-// Download endpoint with signed URL
+// Download endpoint
 app.get('/api/download/:movieId', async (req, res) => {
     try {
         const { movieId } = req.params;
@@ -105,12 +99,19 @@ app.get('/api/download/:movieId', async (req, res) => {
 
         console.log(`â¬‡ï¸ Download request: movie ${movieId}, quality ${quality}`);
 
-        // Generate signed download URL (mock for demo)
+        // Generate download URL
         const downloadUrl = `${CDN_BASE_URL}/downloads/${movieId}_${quality}.mp4?expires=${Date.now() + 600000}`;
 
         // Get movie title for filename
-        const movieData = await fetchMovieData(movieId);
-        const filename = `${(movieData?.title || 'Movie').replace(/[^a-zA-Z0-9_.-]/g, '_')}_${quality}.mp4`;
+        let filename = `Movie_${quality}.mp4`;
+        try {
+            const movieData = await fetchMovieData(movieId);
+            if (movieData?.title) {
+                filename = `${movieData.title.replace(/[^a-zA-Z0-9_.-]/g, '_')}_${quality}.mp4`;
+            }
+        } catch (e) {
+            console.error('Error getting movie title:', e);
+        }
 
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         res.redirect(302, downloadUrl);
@@ -130,13 +131,10 @@ app.get('/api/stream/:movieId/info', async (req, res) => {
             movieId,
             available: true,
             qualities: ['480p', '720p', '1080p', '4K'],
-            duration: 7200, // 2 hours
+            duration: 7200,
             formats: ['HLS', 'MP4'],
-            subtitles: ['en', 'es', 'fr', 'hi'],
-            audio_tracks: [
-                { language: 'en', codec: 'aac' },
-                { language: 'hi', codec: 'aac' }
-            ]
+            subtitles: ['en'],
+            audio_tracks: [{ language: 'en', codec: 'aac' }]
         };
 
         res.json(videoInfo);
@@ -151,9 +149,8 @@ app.get('/api/stream/:movieId/info', async (req, res) => {
 // HELPER FUNCTIONS
 // ==========================================
 
-function generateHLSMasterPlaylist(movieId, requestedQuality) {
-    const qualities = requestedQuality === 'auto' ? 
-        ['480p', '720p', '1080p', '4K'] : [requestedQuality];
+function generateHLSMasterPlaylist(movieId) {
+    const qualities = ['480p', '720p', '1080p', '4K'];
 
     let playlist = `#EXTM3U\n#EXT-X-VERSION:6\n\n`;
 
@@ -185,10 +182,10 @@ function generateQualityPlaylist(movieId, quality) {
 
 function getBandwidthForQuality(quality) {
     const bandwidths = {
-        '480p': 1500000,  // 1.5 Mbps
-        '720p': 3000000,  // 3 Mbps  
-        '1080p': 6000000, // 6 Mbps
-        '4K': 15000000    // 15 Mbps
+        '480p': 1500000,
+        '720p': 3000000,
+        '1080p': 6000000,
+        '4K': 15000000
     };
     return bandwidths[quality] || 3000000;
 }
@@ -196,7 +193,7 @@ function getBandwidthForQuality(quality) {
 function getResolutionForQuality(quality) {
     const resolutions = {
         '480p': '854x480',
-        '720p': '1280x720', 
+        '720p': '1280x720',
         '1080p': '1920x1080',
         '4K': '3840x2160'
     };
@@ -228,7 +225,6 @@ app.get('/api/*', async (req, res) => {
 
         const response = await axios.get(tmdbUrl);
 
-        // Cache TMDb responses
         res.setHeader('Cache-Control', 'public, max-age=300');
         res.json(response.data);
 
