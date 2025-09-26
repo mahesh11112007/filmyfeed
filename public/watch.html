@@ -74,12 +74,14 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 this.localId = urlParams.get('localId');
                 this.movieId = urlParams.get('id');
+                console.log('Watch page params:', { localId: this.localId, movieId: this.movieId });
             }
 
             async loadLocalMovies() {
                 try {
                     const response = await fetch('/data/movies.json');
                     this.localMovies = await response.json();
+                    console.log(`📱 Loaded ${this.localMovies.length} local movies for player`);
                 } catch (error) {
                     console.log('No local movies.json found');
                     this.localMovies = [];
@@ -93,31 +95,38 @@
 
             async initializeLocalPlayer() {
                 try {
-                    const movie = this.localMovies.find(m => m.id === this.localId);
+                    const movie = this.localMovies.find(m => 
+                        String(m.id) === String(this.localId) || 
+                        m.movie === this.localId
+                    );
+
                     if (!movie || !movie.watch) {
                         throw new Error('Movie or stream not found');
                     }
+
+                    console.log('Initializing local player for:', movie);
 
                     this.player = new FilmyFeedPlayer(this.elements.videoContainer, {
                         movieId: this.localId,
                         autoplay: true
                     });
 
-                    // Load local movie data
                     await this.player.loadLocalMovie(movie);
                     this.hidePageLoading();
 
                     // Update page title
-                    document.title = `${movie.title} - FilmyFeed`;
+                    document.title = `${movie.movie || movie.title} - FilmyFeed`;
 
                 } catch (error) {
                     console.error('Error initializing local player:', error);
-                    this.showError('Failed to load video player');
+                    this.showError(`Failed to load video: ${error.message}`);
                 }
             }
 
             async initializeTMDbPlayer() {
                 try {
+                    console.log('Initializing TMDb player for:', this.movieId);
+
                     this.player = new FilmyFeedPlayer(this.elements.videoContainer, {
                         movieId: this.movieId,
                         autoplay: true
@@ -139,6 +148,7 @@
                         <h3>Error</h3>
                         <p>${message}</p>
                         <button onclick="history.back()" class="btn-primary">Go Back</button>
+                        <button onclick="location.reload()" class="btn-secondary" style="margin-top: 1rem;">Retry</button>
                     </div>
                 `;
             }
