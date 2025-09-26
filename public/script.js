@@ -1,6 +1,6 @@
 /**
  * FilmyFeed Mobile App - Netflix-style Interface
- * Features: Hero section, horizontal scrolling, mobile search, navigation to movie details
+ * Home page controller with search, navigation, and movie browsing
  */
 
 class FilmyFeedApp {
@@ -75,6 +75,15 @@ class FilmyFeedApp {
             }
         });
 
+        this.elements.searchInput?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = e.target.value.trim();
+                if (query) {
+                    this.performSearch(query);
+                }
+            }
+        });
+
         // Search overlay background tap
         this.elements.searchOverlay?.addEventListener('click', (e) => {
             if (e.target === this.elements.searchOverlay) {
@@ -91,11 +100,11 @@ class FilmyFeedApp {
 
         // Hero actions
         this.elements.heroPlayBtn?.addEventListener('click', () => {
-            this.playHeroMovie();
+            this.playFeaturedMovie();
         });
 
         this.elements.heroInfoBtn?.addEventListener('click', () => {
-            this.showHeroMovieInfo();
+            this.showFeaturedMovieInfo();
         });
 
         // Bottom navigation
@@ -112,7 +121,7 @@ class FilmyFeedApp {
 
         // Movie card clicks (using event delegation)
         document.addEventListener('click', (e) => {
-            const movieCard = e.target.closest('.movie-card, .search-card');
+            const movieCard = e.target.closest('.movie-card');
             if (movieCard && movieCard.dataset.id) {
                 this.navigateToMovie(movieCard.dataset.id);
             }
@@ -143,7 +152,9 @@ class FilmyFeedApp {
         this.searchActive = false;
         this.elements.searchOverlay?.classList.remove('active');
         this.showHomeContent();
-        this.elements.searchInput.value = '';
+        if (this.elements.searchInput) {
+            this.elements.searchInput.value = '';
+        }
 
         // Update URL
         window.history.pushState({}, '', '/');
@@ -179,7 +190,7 @@ class FilmyFeedApp {
         try {
             this.showLoading();
 
-            // Load hero movie and content rows in parallel
+            // Load hero content and content rows in parallel
             await Promise.all([
                 this.loadHeroContent(),
                 this.loadFeaturedContent(),
@@ -256,11 +267,15 @@ class FilmyFeedApp {
         // Update hero content
         this.elements.heroTitle.textContent = movie.title || 'Featured Movie';
         this.elements.heroDescription.textContent = 
-            movie.overview || 'No description available.';
+            (movie.overview || 'Discover amazing movies and shows.').substring(0, 200) + '...';
 
         // Store movie ID for hero actions
-        this.elements.heroPlayBtn.dataset.movieId = movie.id;
-        this.elements.heroInfoBtn.dataset.movieId = movie.id;
+        if (this.elements.heroPlayBtn) {
+            this.elements.heroPlayBtn.dataset.movieId = movie.id;
+        }
+        if (this.elements.heroInfoBtn) {
+            this.elements.heroInfoBtn.dataset.movieId = movie.id;
+        }
     }
 
     renderContentRow(container, movies) {
@@ -284,7 +299,7 @@ class FilmyFeedApp {
             return;
         }
 
-        const moviesHTML = movies.map(movie => this.createSearchCard(movie)).join('');
+        const moviesHTML = movies.map(movie => this.createMovieCard(movie)).join('');
         this.elements.searchResultsGrid.innerHTML = moviesHTML;
 
         // Update search results title
@@ -308,31 +323,7 @@ class FilmyFeedApp {
             <div class="movie-card" data-id="${movie.id}" role="button" tabindex="0">
                 ${posterUrl 
                     ? `<img class="card-poster" src="${posterUrl}" alt="${title}" loading="lazy">` 
-                    : '<div class="card-poster" style="background: var(--bg-card); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.8rem;">No Image</div>'
-                }
-                <div class="card-info">
-                    <div class="card-title">${title}</div>
-                    ${year ? `<div class="card-year">${year}</div>` : ''}
-                </div>
-            </div>
-        `;
-    }
-
-    createSearchCard(movie) {
-        const posterUrl = movie.poster_path 
-            ? `${this.IMG_BASE}${movie.poster_path}` 
-            : null;
-
-        const title = this.escapeHtml(movie.title || 'Untitled');
-        const year = movie.release_date 
-            ? new Date(movie.release_date).getFullYear() 
-            : '';
-
-        return `
-            <div class="search-card movie-card" data-id="${movie.id}" role="button" tabindex="0">
-                ${posterUrl 
-                    ? `<img class="card-poster" src="${posterUrl}" alt="${title}" loading="lazy">` 
-                    : '<div class="card-poster" style="background: var(--bg-card); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.8rem;">No Image</div>'
+                    : '<div class="card-poster no-poster"><span>No Image</span></div>'
                 }
                 <div class="card-info">
                     <div class="card-title">${title}</div>
@@ -345,19 +336,17 @@ class FilmyFeedApp {
     // Navigation Functions
     navigateToMovie(movieId) {
         if (!movieId) return;
-
-        // Navigate to movie details page
         window.location.href = `/movie.html?id=${encodeURIComponent(movieId)}`;
     }
 
-    playHeroMovie() {
+    playFeaturedMovie() {
         const movieId = this.elements.heroPlayBtn?.dataset.movieId;
         if (movieId) {
-            this.navigateToMovie(movieId);
+            window.location.href = `/watch.html?id=${encodeURIComponent(movieId)}`;
         }
     }
 
-    showHeroMovieInfo() {
+    showFeaturedMovieInfo() {
         const movieId = this.elements.heroInfoBtn?.dataset.movieId;
         if (movieId) {
             this.navigateToMovie(movieId);
@@ -380,7 +369,6 @@ class FilmyFeedApp {
             case 'coming-soon':
             case 'downloads':
             case 'more':
-                // Placeholder for future functionality
                 console.log(`Navigation to ${tab} - Coming soon!`);
                 break;
         }
