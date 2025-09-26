@@ -2,107 +2,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#000000">
-  <title>Movie - FilmyFeed</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="movie.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Details - FilmyFeed</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="movie.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="movie-page">
-  <header class="app-header movie-header">
-    <div class="header-container">
-      <div class="header-left">
-        <button class="back-btn" id="back-btn" aria-label="Back">⟵</button>
-        <span class="brand-text">FILMYFEED</span>
-      </div>
-      <div class="header-right">
-        <button class="search-btn" id="search-btn" aria-label="Search">🔍</button>
-        <button class="share-btn" id="share-btn" aria-label="Share">⤴</button>
-      </div>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo" aria-label="FilmyFeed">
+                <img src="logo.png" alt="FilmyFeed Logo" onerror="this.style.display='none'">
+                <h1>FilmyFeed</h1>
+            </div>
+            <nav>
+                <a href="/" class="nav-link">Home</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div id="loading" class="loading" role="status" aria-live="polite">
+                <div class="spinner"></div>
+                Loading movie...
+            </div>
+            
+            <div id="error" class="error hidden" role="alert">
+                <h2>Error loading movie</h2>
+                <p id="error-message">Something went wrong. Please try again later.</p>
+                <button id="retry-btn" class="retry-btn">Try Again</button>
+            </div>
+
+            <div id="movie-details" class="movie-details hidden">
+                <div class="movie-header">
+                    <div class="movie-poster-container">
+                        <img id="movie-poster" class="movie-poster" alt="Movie Poster">
+                        <div class="play-button" id="play-btn">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                            <span>Watch Trailer</span>
+                        </div>
+                    </div>
+                    
+                    <div class="movie-info">
+                        <h1 id="movie-title" class="movie-title"></h1>
+                        <p id="movie-tagline" class="movie-tagline"></p>
+                        
+                        <div class="movie-meta">
+                            <span id="movie-year" class="meta-item"></span>
+                            <span id="movie-runtime" class="meta-item"></span>
+                            <span id="movie-rating" class="meta-item rating"></span>
+                        </div>
+                        
+                        <div class="movie-genres" id="movie-genres"></div>
+                        
+                        <div class="movie-overview">
+                            <h3>Overview</h3>
+                            <p id="movie-description"></p>
+                        </div>
+                        
+                        <div class="movie-stats">
+                            <div class="stat">
+                                <span class="stat-label">Rating</span>
+                                <span id="vote-average" class="stat-value"></span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">Votes</span>
+                                <span id="vote-count" class="stat-value"></span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">Budget</span>
+                                <span id="movie-budget" class="stat-value"></span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">Revenue</span>
+                                <span id="movie-revenue" class="stat-value"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="movie-cast" id="movie-cast">
+                    <h3>Cast</h3>
+                    <div class="cast-grid" id="cast-grid"></div>
+                </div>
+
+                <div class="movie-crew" id="movie-crew">
+                    <h3>Crew</h3>
+                    <div class="crew-list" id="crew-list"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Trailer Modal -->
+    <div id="trailer-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="trailer-title">
+        <div class="modal-content">
+            <button class="close-modal" aria-label="Close trailer">&times;</button>
+            <h2 id="trailer-title">Movie Trailer</h2>
+            <div id="trailer-container" class="trailer-container">
+                <iframe id="trailer-iframe" width="100%" height="400" frameborder="0" allowfullscreen></iframe>
+            </div>
+        </div>
     </div>
-  </header>
 
-  <main id="movie-content" class="main-content movie-details hidden">
-    <section class="movie-hero">
-      <div id="movie-backdrop" class="hero-backdrop"></div>
-      <div class="hero-gradient"></div>
-
-      <div class="hero-info-overlay">
-        <img id="movie-poster" class="movie-poster" alt="Poster">
-        <div class="movie-basic-info">
-          <h1 id="movie-title" class="movie-title">Loading...</h1>
-          <div id="movie-meta" class="movie-meta">Year • Language • ★ Rating</div>
-          <div id="movie-genres" class="movie-genres"></div>
-        </div>
-      </div>
-
-      <div class="play-button-overlay">
-        <button class="hero-play-btn" id="hero-play-btn" aria-label="Play">▶</button>
-      </div>
-    </section>
-
-    <section class="action-section">
-      <div class="action-buttons">
-        <button class="btn-primary" id="play-btn">▶ Play</button>
-        <button class="btn-secondary" id="trailer-btn">👁 Watch Trailer</button>
-        <button class="btn-icon" id="download-btn" aria-label="Download">⬇</button>
-        <button class="btn-icon" id="add-list-btn" aria-label="Add to List">＋</button>
-      </div>
-    </section>
-
-    <section class="details-section">
-      <div class="detail-item">
-        <h3 class="detail-title">About</h3>
-        <p id="movie-overview" class="detail-text">Loading overview…</p>
-      </div>
-
-      <div class="detail-item">
-        <h3 class="detail-title">Cast & crew</h3>
-        <div class="cast-info">
-          <div class="info-row"><span class="info-label">Director</span><span id="movie-director" class="info-value">–</span></div>
-          <div class="info-row"><span class="info-label">Cast</span><span id="movie-cast" class="info-value">–</span></div>
-        </div>
-      </div>
-
-      <div class="detail-item">
-        <h3 class="detail-title">Details</h3>
-        <div class="movie-info-grid">
-          <div class="info-row"><span class="info-label">Release</span><span id="movie-release" class="info-value">–</span></div>
-          <div class="info-row"><span class="info-label">Runtime</span><span id="movie-runtime" class="info-value">–</span></div>
-          <div class="info-row"><span class="info-label">Language</span><span id="movie-language" class="info-value">–</span></div>
-          <div class="info-row"><span class="info-label">Rating</span><span id="movie-rating" class="info-value">–</span></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="related-section">
-      <h3 class="section-title">More like this</h3>
-      <div id="related-movies" class="related-movies"></div>
-    </section>
-  </main>
-
-  <div id="movie-loading" class="movie-loading">
-    <div class="loading-spinner"></div>
-    <span>Loading movie…</span>
-  </div>
-
-  <div id="movie-error" class="status-message error hidden">
-    <span>Failed to load. Tap to retry.</span>
-  </div>
-
-  <div id="trailer-modal" class="trailer-modal hidden">
-    <div class="trailer-container">
-      <div class="trailer-header">
-        <h3 id="trailer-title" class="trailer-title">Trailer</h3>
-        <button id="trailer-close" class="trailer-close">✕</button>
-      </div>
-      <div class="trailer-frame-wrapper">
-        <iframe id="trailer-iframe" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-      </div>
-    </div>
-  </div>
-
-  <script src="movie.js"></script>
+    <script src="movie.js"></script>
 </body>
 </html>
