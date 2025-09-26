@@ -3,171 +3,104 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#000000">
-    <title>Watch - FilmyFeed</title>
-
-    <!-- HLS.js for video streaming -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.10/dist/hls.min.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Movie - FilmyFeed</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="player.css">
-
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="stylesheet" href="watch.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="watch-page">
-    <div id="video-player-container" class="video-player-container">
-        <!-- Player will be injected here -->
-    </div>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo" aria-label="FilmyFeed">
+                <img src="logo.png" alt="FilmyFeed Logo" onerror="this.style.display='none'">
+                <h1>FilmyFeed</h1>
+            </div>
+            <nav>
+                <a href="/" class="nav-link">Home</a>
+                <button id="back-btn" class="nav-link back-btn">← Back to Movie</button>
+            </nav>
+        </div>
+    </header>
 
-    <div id="page-loading" class="page-loading">
-        <div class="loading-spinner"></div>
-        <span>Initializing player...</span>
-    </div>
+    <main>
+        <div class="watch-container">
+            <div id="loading" class="loading" role="status" aria-live="polite">
+                <div class="spinner"></div>
+                Loading video...
+            </div>
+            
+            <div id="error" class="error hidden" role="alert">
+                <h2>Video Not Available</h2>
+                <p id="error-message">This movie is not available for streaming yet.</p>
+                <div class="error-actions">
+                    <button id="retry-btn" class="retry-btn">Try Again</button>
+                    <button id="back-to-movie" class="back-btn">Back to Movie Details</button>
+                </div>
+            </div>
 
-    <div id="unsupported-browser" class="unsupported-browser hidden">
-        <div class="unsupported-content">
-            <h2>Browser Not Supported</h2>
-            <p>Please use a modern browser to watch videos.</p>
-            <button onclick="history.back()" class="btn-primary">Go Back</button>
+            <div id="video-player" class="video-player hidden">
+                <div class="video-container">
+                    <iframe id="video-iframe" 
+                            width="100%" 
+                            height="100%" 
+                            frameborder="0" 
+                            allowfullscreen
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+                    </iframe>
+                    <div class="video-overlay" id="video-overlay">
+                        <div class="play-button" id="play-button">
+                            <svg width="60" height="60" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="video-info">
+                    <h1 id="movie-title" class="movie-title">Loading...</h1>
+                    <div class="video-meta">
+                        <span id="movie-year" class="meta-item"></span>
+                        <span id="movie-rating" class="meta-item"></span>
+                        <span id="movie-runtime" class="meta-item"></span>
+                    </div>
+                    <p id="movie-description" class="movie-description">Loading movie description...</p>
+                </div>
+            </div>
+
+            <!-- Alternative streaming options -->
+            <div id="streaming-options" class="streaming-options hidden">
+                <h3>Available On</h3>
+                <div class="streaming-services">
+                    <div class="service-notice">
+                        <h4>🎬 Watch Options</h4>
+                        <p>This movie might be available on popular streaming platforms:</p>
+                        <div class="platform-links">
+                            <a href="#" target="_blank" rel="noopener" class="platform-link netflix">Netflix</a>
+                            <a href="#" target="_blank" rel="noopener" class="platform-link amazon">Prime Video</a>
+                            <a href="#" target="_blank" rel="noopener" class="platform-link disney">Disney+</a>
+                            <a href="#" target="_blank" rel="noopener" class="platform-link hulu">Hulu</a>
+                        </div>
+                        <p class="disclaimer">*Availability varies by region. Check your local streaming services.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Quality Selector Modal -->
+    <div id="quality-modal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <button class="close-modal" aria-label="Close quality selector">&times;</button>
+            <h2>Select Quality</h2>
+            <div class="quality-options">
+                <button class="quality-btn" data-quality="720p">HD (720p)</button>
+                <button class="quality-btn" data-quality="1080p">Full HD (1080p)</button>
+                <button class="quality-btn" data-quality="4K">Ultra HD (4K)</button>
+            </div>
         </div>
     </div>
 
-    <script src="player.js"></script>
-    <script>
-        class WatchPageController {
-            constructor() {
-                this.movieId = null;
-                this.localId = null;
-                this.player = null;
-                this.localMovies = [];
-
-                this.elements = {
-                    pageLoading: document.getElementById('page-loading'),
-                    unsupportedBrowser: document.getElementById('unsupported-browser'),
-                    videoContainer: document.getElementById('video-player-container')
-                };
-
-                this.init();
-            }
-
-            async init() {
-                this.extractParams();
-                await this.loadLocalMovies();
-
-                if (!this.checkBrowserSupport()) {
-                    this.showUnsupportedBrowser();
-                    return;
-                }
-
-                if (this.localId) {
-                    await this.initializeLocalPlayer();
-                } else if (this.movieId) {
-                    await this.initializeTMDbPlayer();
-                } else {
-                    this.showError('Movie not found');
-                }
-            }
-
-            extractParams() {
-                const urlParams = new URLSearchParams(window.location.search);
-                this.localId = urlParams.get('localId');
-                this.movieId = urlParams.get('id');
-                console.log('Watch page params:', { localId: this.localId, movieId: this.movieId });
-            }
-
-            async loadLocalMovies() {
-                try {
-                    const response = await fetch('/data/movies.json');
-                    this.localMovies = await response.json();
-                    console.log(`📱 Loaded ${this.localMovies.length} local movies for player`);
-                } catch (error) {
-                    console.log('No local movies.json found');
-                    this.localMovies = [];
-                }
-            }
-
-            checkBrowserSupport() {
-                return window.Hls && Hls.isSupported() || 
-                       document.createElement('video').canPlayType('application/vnd.apple.mpegurl');
-            }
-
-            async initializeLocalPlayer() {
-                try {
-                    const movie = this.localMovies.find(m => 
-                        String(m.id) === String(this.localId) || 
-                        m.movie === this.localId
-                    );
-
-                    if (!movie || !movie.watch) {
-                        throw new Error('Movie or stream not found');
-                    }
-
-                    console.log('Initializing local player for:', movie);
-
-                    this.player = new FilmyFeedPlayer(this.elements.videoContainer, {
-                        movieId: this.localId,
-                        autoplay: true
-                    });
-
-                    await this.player.loadLocalMovie(movie);
-                    this.hidePageLoading();
-
-                    // Update page title
-                    document.title = `${movie.movie || movie.title} - FilmyFeed`;
-
-                } catch (error) {
-                    console.error('Error initializing local player:', error);
-                    this.showError(`Failed to load video: ${error.message}`);
-                }
-            }
-
-            async initializeTMDbPlayer() {
-                try {
-                    console.log('Initializing TMDb player for:', this.movieId);
-
-                    this.player = new FilmyFeedPlayer(this.elements.videoContainer, {
-                        movieId: this.movieId,
-                        autoplay: true
-                    });
-
-                    await this.player.load(this.movieId);
-                    this.hidePageLoading();
-
-                } catch (error) {
-                    console.error('Error initializing TMDb player:', error);
-                    this.showError('Failed to load video player');
-                }
-            }
-
-            showError(message) {
-                this.hidePageLoading();
-                this.elements.videoContainer.innerHTML = `
-                    <div class="player-error">
-                        <h3>Error</h3>
-                        <p>${message}</p>
-                        <button onclick="history.back()" class="btn-primary">Go Back</button>
-                        <button onclick="location.reload()" class="btn-secondary" style="margin-top: 1rem;">Retry</button>
-                    </div>
-                `;
-            }
-
-            showUnsupportedBrowser() {
-                this.hidePageLoading();
-                this.elements.unsupportedBrowser.classList.remove('hidden');
-            }
-
-            hidePageLoading() {
-                this.elements.pageLoading.classList.add('hidden');
-            }
-        }
-
-        // Initialize when DOM is ready
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('🎬 FilmyFeed Watch Page initialized');
-            window.watchController = new WatchPageController();
-        });
-    </script>
+    <script src="watch.js"></script>
 </body>
 </html>
