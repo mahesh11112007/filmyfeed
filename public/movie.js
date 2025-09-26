@@ -1,520 +1,308 @@
-/**
- * FilmyFeed Movie Details Page - CORRECTED
- * Properly handles both local JSON movies and TMDb movies
- */
+// Movie Details Page JavaScript
 
-class MovieDetailsApp {
-    constructor() {
-        this.API_BASE = '/api';
-        this.IMG_BASE = 'https://image.tmdb.org/t/p/w500';
-        this.BACKDROP_BASE = 'https://image.tmdb.org/t/p/original';
-        this.movieId = null;
-        this.localId = null;
-        this.movieData = null;
-        this.creditsData = null;
-        this.isLocalMovie = false;
-        this.localMovies = [];
+// DOM Elements
+const loadingEl = document.getElementById('loading');
+const errorEl = document.getElementById('error');
+const errorMessageEl = document.getElementById('error-message');
+const retryBtn = document.getElementById('retry-btn');
+const movieDetailsEl = document.getElementById('movie-details');
 
-        this.elements = {
-            // Navigation
-            backBtn: document.getElementById('back-btn'),
-            searchBtn: document.getElementById('search-btn'),
-            shareBtn: document.getElementById('share-btn'),
+// Movie elements
+const moviePosterEl = document.getElementById('movie-poster');
+const movieTitleEl = document.getElementById('movie-title');
+const movieTaglineEl = document.getElementById('movie-tagline');
+const movieYearEl = document.getElementById('movie-year');
+const movieRuntimeEl = document.getElementById('movie-runtime');
+const movieRatingEl = document.getElementById('movie-rating');
+const movieGenresEl = document.getElementById('movie-genres');
+const movieDescriptionEl = document.getElementById('movie-description');
+const voteAverageEl = document.getElementById('vote-average');
+const voteCountEl = document.getElementById('vote-count');
+const movieBudgetEl = document.getElementById('movie-budget');
+const movieRevenueEl = document.getElementById('movie-revenue');
+const castGridEl = document.getElementById('cast-grid');
+const crewListEl = document.getElementById('crew-list');
 
-            // Loading/Error states
-            movieLoading: document.getElementById('movie-loading'),
-            movieError: document.getElementById('movie-error'),
-            movieContent: document.getElementById('movie-content'),
+// Trailer elements
+const playBtn = document.getElementById('play-btn');
+const trailerModal = document.getElementById('trailer-modal');
+const trailerIframe = document.getElementById('trailer-iframe');
+const closeModalBtn = document.querySelector('.close-modal');
 
-            // Hero section
-            movieBackdrop: document.getElementById('movie-backdrop'),
-            moviePoster: document.getElementById('movie-poster'),
-            movieTitle: document.getElementById('movie-title'),
-            movieMeta: document.getElementById('movie-meta'),
-            movieGenres: document.getElementById('movie-genres'),
-            heroPlayBtn: document.getElementById('hero-play-btn'),
+// Constants
+const IMG_BASE = 'https://image.tmdb.org/t/p/w500';
+const IMG_ORIGINAL = 'https://image.tmdb.org/t/p/original';
 
-            // Action buttons
-            playBtn: document.getElementById('play-btn'),
-            trailerBtn: document.getElementById('trailer-btn'),
-            downloadBtn: document.getElementById('download-btn'),
-            addListBtn: document.getElementById('add-list-btn'),
+// State
+let currentMovieId = null;
+let movieData = null;
 
-            // Details
-            movieOverview: document.getElementById('movie-overview'),
-            movieDirector: document.getElementById('movie-director'),
-            movieCast: document.getElementById('movie-cast'),
-            movieRelease: document.getElementById('movie-release'),
-            movieRuntime: document.getElementById('movie-runtime'),
-            movieLanguage: document.getElementById('movie-language'),
-            movieRating: document.getElementById('movie-rating'),
+// Utility Functions
+function getMovieIdFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('id');
+}
 
-            // Related movies
-            relatedMovies: document.getElementById('related-movies'),
+function formatCurrency(amount) {
+    if (!amount || amount === 0) return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(amount);
+}
 
-            // Trailer modal
-            trailerModal: document.getElementById('trailer-modal'),
-            trailerClose: document.getElementById('trailer-close'),
-            trailerIframe: document.getElementById('trailer-iframe'),
-            trailerTitle: document.getElementById('trailer-title')
-        };
+function formatRuntime(minutes) {
+    if (!minutes) return 'N/A';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+}
 
-        this.init();
+function escapeHtml(str) {
+    return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+// API Functions
+async function fetchMovieData(movieId) {
+    const url = new URL(`/api/movie/${movieId}`, window.location.origin);
+    const response = await fetch(url.toString());
+    
+    if (!response.ok) {
+        throw new Error(`Failed to fetch movie data: ${response.statusText}`);
     }
+    
+    return await response.json();
+}
 
-    async init() {
-        this.setupEventListeners();
-        this.extractParams();
-        await this.loadLocalMovies();
-
-        // CORRECTED: Properly determine movie type and load details
-        if (this.localId) {
-            console.log('Loading local movie:', this.localId);
-            this.isLocalMovie = true;
-            await this.loadLocalMovieDetails();
-        } else if (this.movieId) {
-            console.log('Loading TMDb movie:', this.movieId);
-            this.isLocalMovie = false;
-            await this.loadTMDbMovieDetails();
-        } else {
-            console.error('No movie ID found in URL');
-            this.showError('Movie not found. Please check the URL.');
-        }
+async function fetchMovieCredits(movieId) {
+    const url = new URL(`/api/movie/${movieId}/credits`, window.location.origin);
+    const response = await fetch(url.toString());
+    
+    if (!response.ok) {
+        throw new Error(`Failed to fetch movie credits: ${response.statusText}`);
     }
+    
+    return await response.json();
+}
 
-    async loadLocalMovies() {
-        try {
-            const response = await fetch('/data/movies.json');
-            this.localMovies = await response.json();
-            console.log(`ðŸ“± Loaded ${this.localMovies.length} local movies for details page`);
-        } catch (error) {
-            console.log('No local movies.json found');
-            this.localMovies = [];
+async function fetchMovieVideos(movieId) {
+    try {
+        const url = new URL(`/api/movie/${movieId}/videos`, window.location.origin);
+        const response = await fetch(url.toString());
+        
+        if (!response.ok) {
+            return { results: [] };
         }
+        
+        return await response.json();
+    } catch (error) {
+        console.warn('Failed to fetch videos:', error);
+        return { results: [] };
     }
+}
 
-    setupEventListeners() {
-        // Navigation
-        this.elements.backBtn?.addEventListener('click', () => {
-            this.goBack();
-        });
+// UI Functions
+function showLoading() {
+    loadingEl.classList.remove('hidden');
+    errorEl.classList.add('hidden');
+    movieDetailsEl.classList.add('hidden');
+}
 
-        this.elements.searchBtn?.addEventListener('click', () => {
-            window.location.href = 'index.html';
-        });
+function hideLoading() {
+    loadingEl.classList.add('hidden');
+}
 
-        this.elements.shareBtn?.addEventListener('click', () => {
-            this.shareMovie();
-        });
+function showError(message) {
+    errorMessageEl.textContent = message;
+    errorEl.classList.remove('hidden');
+    loadingEl.classList.add('hidden');
+    movieDetailsEl.classList.add('hidden');
+}
 
-        // Action buttons
-        this.elements.playBtn?.addEventListener('click', () => {
-            this.playMovie();
-        });
+function showMovieDetails() {
+    movieDetailsEl.classList.remove('hidden');
+    errorEl.classList.add('hidden');
+    loadingEl.classList.add('hidden');
+}
 
-        this.elements.heroPlayBtn?.addEventListener('click', () => {
-            this.playMovie();
-        });
-
-        this.elements.trailerBtn?.addEventListener('click', () => {
-            this.playTrailer();
-        });
-
-        this.elements.downloadBtn?.addEventListener('click', () => {
-            this.downloadMovie();
-        });
-
-        this.elements.addListBtn?.addEventListener('click', () => {
-            this.toggleMyList();
-        });
-
-        // Trailer modal
-        this.elements.trailerClose?.addEventListener('click', () => {
-            this.closeTrailer();
-        });
-
-        this.elements.trailerModal?.addEventListener('click', (e) => {
-            if (e.target === this.elements.trailerModal) {
-                this.closeTrailer();
-            }
-        });
-
-        // Error retry
-        this.elements.movieError?.addEventListener('click', () => {
-            if (this.localId) {
-                this.loadLocalMovieDetails();
-            } else if (this.movieId) {
-                this.loadTMDbMovieDetails();
-            }
-        });
-
-        // Related movies clicks
-        document.addEventListener('click', (e) => {
-            const relatedCard = e.target.closest('.related-card');
-            if (relatedCard) {
-                const localId = relatedCard.dataset.localId;
-                const tmdbId = relatedCard.dataset.id;
-
-                if (localId) {
-                    window.location.href = `movie.html?localId=${encodeURIComponent(localId)}`;
-                } else if (tmdbId) {
-                    window.location.href = `movie.html?id=${encodeURIComponent(tmdbId)}`;
-                }
-            }
-        });
+// Render Functions
+function renderMovieDetails(data) {
+    movieData = data;
+    
+    // Basic movie info
+    movieTitleEl.textContent = data.title || 'Untitled';
+    movieTaglineEl.textContent = data.tagline || '';
+    movieTaglineEl.style.display = data.tagline ? 'block' : 'none';
+    
+    // Poster
+    if (data.poster_path) {
+        moviePosterEl.src = `${IMG_BASE}${data.poster_path}`;
+        moviePosterEl.alt = `${data.title} Poster`;
+    } else {
+        moviePosterEl.src = '';
+        moviePosterEl.alt = 'No poster available';
+        moviePosterEl.style.display = 'none';
     }
-
-    extractParams() {
-        const urlParams = new URLSearchParams(window.location.search);
-        this.localId = urlParams.get('localId');
-        this.movieId = urlParams.get('id');
-
-        console.log('URL params extracted:', { localId: this.localId, movieId: this.movieId });
+    
+    // Meta information
+    const releaseYear = data.release_date ? new Date(data.release_date).getFullYear() : 'N/A';
+    movieYearEl.textContent = releaseYear;
+    
+    movieRuntimeEl.textContent = formatRuntime(data.runtime);
+    
+    const rating = data.vote_average ? `â­ ${data.vote_average.toFixed(1)}` : 'N/A';
+    movieRatingEl.textContent = rating;
+    
+    // Genres
+    if (data.genres && data.genres.length > 0) {
+        movieGenresEl.innerHTML = data.genres
+            .map(genre => `<span class="genre-tag">${escapeHtml(genre.name)}</span>`)
+            .join('');
+    } else {
+        movieGenresEl.innerHTML = '';
     }
+    
+    // Overview
+    movieDescriptionEl.textContent = data.overview || 'No overview available.';
+    
+    // Stats
+    voteAverageEl.textContent = data.vote_average ? data.vote_average.toFixed(1) : 'N/A';
+    voteCountEl.textContent = data.vote_count ? data.vote_count.toLocaleString() : 'N/A';
+    movieBudgetEl.textContent = formatCurrency(data.budget);
+    movieRevenueEl.textContent = formatCurrency(data.revenue);
+    
+    // Update page title
+    document.title = `${data.title} - FilmyFeed`;
+}
 
-    async loadLocalMovieDetails() {
-        this.showLoading();
-
-        try {
-            // Find the local movie by ID
-            const movie = this.localMovies.find(m => 
-                String(m.id) === String(this.localId) || 
-                m.movie === this.localId
-            );
-
-            if (!movie) {
-                throw new Error(`Local movie not found: ${this.localId}`);
-            }
-
-            console.log('Found local movie:', movie);
-
-            // Enrich with TMDb data if ID is available
-            if (movie.id && typeof movie.id === 'number') {
-                this.movieData = await this.enrichWithTMDb(movie);
-            } else {
-                this.movieData = movie;
-            }
-
-            this.renderMovieDetails();
-            this.updatePageTitle();
-            this.showContent();
-
-        } catch (error) {
-            console.error('Error loading local movie:', error);
-            this.showError(`Failed to load movie details: ${error.message}`);
-        }
+function renderCast(credits) {
+    if (!credits.cast || credits.cast.length === 0) {
+        castGridEl.innerHTML = '<p>No cast information available.</p>';
+        return;
     }
-
-    async loadTMDbMovieDetails() {
-        this.showLoading();
-
-        try {
-            const [movieResponse, creditsResponse, similarResponse] = await Promise.all([
-                this.fetchFromAPI(`movie/${this.movieId}`),
-                this.fetchFromAPI(`movie/${this.movieId}/credits`),
-                this.fetchFromAPI(`movie/${this.movieId}/similar`, { page: 1 })
-            ]);
-
-            this.movieData = movieResponse;
-            this.creditsData = creditsResponse;
-
-            this.renderMovieDetails();
-            this.renderSimilarMovies(similarResponse.results || []);
-            this.updatePageTitle();
-            this.showContent();
-
-        } catch (error) {
-            console.error('Error loading TMDb movie:', error);
-            this.showError('Failed to load movie details from TMDb. Check your API key.');
-        }
-    }
-
-    // TMDb Enrichment Function (same as in script.js)
-    async enrichWithTMDb(minItem) {
-        if (!minItem.id) return minItem;
-
-        try {
-            const [details, credits] = await Promise.all([
-                this.fetchFromAPI(`movie/${minItem.id}`),
-                this.fetchFromAPI(`movie/${minItem.id}/credits`)
-            ]);
-
-            return {
-                ...minItem,
-                title: details.title || minItem.movie,
-                year: details.release_date ? new Date(details.release_date).getFullYear() : undefined,
-                language: details.original_language?.toUpperCase(),
-                rating: typeof details.vote_average === 'number' ? details.vote_average.toFixed(1) : undefined,
-                runtime: details.runtime,
-                poster: details.poster_path ? `${this.IMG_BASE}${details.poster_path}` : undefined,
-                backdrop: details.backdrop_path ? `${this.BACKDROP_BASE}${details.backdrop_path}` : undefined,
-                overview: details.overview,
-                genres: (details.genres || []).map(g => g.name),
-                cast: (credits.cast || []).slice(0, 5).map(p => p.name),
-                director: (credits.crew || []).find(p => p.job === 'Director')?.name,
-                // Store credits for later use
-                _tmdbDetails: details,
-                _tmdbCredits: credits
-            };
-        } catch (e) {
-            console.log('TMDb enrichment failed for', minItem.movie || minItem.id, e);
-            return minItem;
-        }
-    }
-
-    renderMovieDetails() {
-        if (!this.movieData) return;
-
-        console.log('Rendering movie details:', this.movieData);
-
-        // Hero backdrop
-        const backdropUrl = this.isLocalMovie ? 
-            (this.movieData.backdrop || (this.movieData.backdrop_path ? `${this.BACKDROP_BASE}${this.movieData.backdrop_path}` : null)) :
-            (this.movieData.backdrop_path ? `${this.BACKDROP_BASE}${this.movieData.backdrop_path}` : null);
-
-        if (backdropUrl && this.elements.movieBackdrop) {
-            this.elements.movieBackdrop.style.backgroundImage = `url(${backdropUrl})`;
-        }
-
-        // Movie poster
-        const posterUrl = this.isLocalMovie ? 
-            (this.movieData.poster || (this.movieData.poster_path ? `${this.IMG_BASE}${this.movieData.poster_path}` : null)) :
-            (this.movieData.poster_path ? `${this.IMG_BASE}${this.movieData.poster_path}` : null);
-
-        if (posterUrl && this.elements.moviePoster) {
-            this.elements.moviePoster.src = posterUrl;
-            this.elements.moviePoster.alt = `${this.movieData.title || this.movieData.movie} poster`;
-        }
-
-        // Basic info
-        if (this.elements.movieTitle) {
-            this.elements.movieTitle.textContent = this.movieData.title || this.movieData.movie || 'Untitled';
-        }
-
-        // Meta information
-        this.renderMovieMeta();
-
-        // Genres
-        this.renderGenres();
-
-        // Overview
-        if (this.elements.movieOverview) {
-            this.elements.movieOverview.textContent = 
-                this.movieData.overview || 'No overview available.';
-        }
-
-        // Movie details
-        this.renderMovieInfo();
-
-        // Cast & Crew (for enriched local movies or TMDb movies)
-        this.renderCastCrew();
-
-        // Related movies (for local movies, show other local movies)
-        if (this.isLocalMovie) {
-            const otherMovies = this.localMovies.filter(m => m.id !== this.localId).slice(0, 6);
-            this.renderRelatedMovies(otherMovies, true);
-        }
-    }
-
-    renderMovieMeta() {
-        if (!this.elements.movieMeta) return;
-
-        const year = this.isLocalMovie ? 
-            (this.movieData.year || (this.movieData.release_date ? new Date(this.movieData.release_date).getFullYear() : '')) :
-            (this.movieData.release_date ? new Date(this.movieData.release_date).getFullYear() : '');
-
-        const rating = this.isLocalMovie ? 
-            (this.movieData.rating || (typeof this.movieData.vote_average === 'number' ? this.movieData.vote_average.toFixed(1) : 'N/A')) :
-            (typeof this.movieData.vote_average === 'number' ? this.movieData.vote_average.toFixed(1) : 'N/A');
-
-        const language = this.isLocalMovie ? 
-            (this.movieData.language || this.movieData.original_language || '').toUpperCase() :
-            (this.movieData.original_language || '').toUpperCase();
-
-        const metaParts = [];
-        if (year) metaParts.push(year);
-        if (language) metaParts.push(language);
-        metaParts.push(`â˜… ${rating}`);
-
-        this.elements.movieMeta.textContent = metaParts.join(' â€¢ ');
-    }
-
-    renderGenres() {
-        if (!this.elements.movieGenres) return;
-
-        let genres = [];
-        if (this.isLocalMovie && this.movieData.genres) {
-            genres = this.movieData.genres;
-        } else if (!this.isLocalMovie && this.movieData.genres) {
-            genres = this.movieData.genres.map(g => g.name || g);
-        }
-
-        if (genres.length > 0) {
-            const genresHTML = genres
-                .slice(0, 3)
-                .map(genre => `<span class="genre-tag">${this.escapeHtml(genre)}</span>`)
-                .join('');
-            this.elements.movieGenres.innerHTML = genresHTML;
-        }
-    }
-
-    renderMovieInfo() {
-        // Release date
-        if (this.elements.movieRelease) {
-            const releaseDate = this.isLocalMovie ? 
-                (this.movieData.year || (this.movieData.release_date ? this.formatDate(this.movieData.release_date) : 'Not available')) :
-                (this.movieData.release_date ? this.formatDate(this.movieData.release_date) : 'Not available');
-            this.elements.movieRelease.textContent = releaseDate;
-        }
-
-        // Runtime
-        if (this.elements.movieRuntime) {
-            this.elements.movieRuntime.textContent = 
-                this.formatRuntime(this.movieData.runtime) || 'Not available';
-        }
-
-        // Language
-        if (this.elements.movieLanguage) {
-            const language = this.isLocalMovie ? 
-                (this.movieData.language?.toUpperCase() || this.movieData.original_language?.toUpperCase() || 'Not available') :
-                (this.movieData.spoken_languages?.[0]?.english_name || 
-                 (this.movieData.original_language || '').toUpperCase() || 
-                 'Unknown');
-            this.elements.movieLanguage.textContent = language;
-        }
-
-        // Rating
-        if (this.elements.movieRating) {
-            const rating = this.isLocalMovie ? 
-                (this.movieData.rating ? `${this.movieData.rating}/10` : 
-                 (typeof this.movieData.vote_average === 'number' ? `${this.movieData.vote_average.toFixed(1)}/10` : 'N/A')) :
-                (typeof this.movieData.vote_average === 'number' ? `${this.movieData.vote_average.toFixed(1)}/10` : 'N/A');
-            this.elements.movieRating.textContent = rating;
-        }
-    }
-
-    renderCastCrew() {
-        // Director
-        if (this.elements.movieDirector) {
-            const director = this.isLocalMovie ? 
-                (this.movieData.director || 
-                 (this.movieData._tmdbCredits?.crew?.find(person => person.job === 'Director')?.name)) :
-                (this.creditsData?.crew?.find(person => person.job === 'Director')?.name);
-            this.elements.movieDirector.textContent = director || 'Not available';
-        }
-
-        // Cast
-        if (this.elements.movieCast) {
-            const cast = this.isLocalMovie ? 
-                (this.movieData.cast || 
-                 (this.movieData._tmdbCredits?.cast?.slice(0, 5).map(person => person.name))) :
-                (this.creditsData?.cast?.slice(0, 5).map(person => person.name) || []);
-
-            const castText = Array.isArray(cast) ? cast.join(', ') : (cast || 'Not available');
-            this.elements.movieCast.textContent = castText;
-        }
-    }
-
-    renderRelatedMovies(movies, isLocal) {
-        if (!this.elements.relatedMovies) return;
-
-        if (!movies || movies.length === 0) {
-            this.elements.relatedMovies.innerHTML = 
-                '<div class="loading-placeholder"><span>No similar movies found</span></div>';
-            return;
-        }
-
-        const moviesHTML = movies.slice(0, 6).map(movie => this.createRelatedCard(movie, isLocal)).join('');
-        this.elements.relatedMovies.innerHTML = moviesHTML;
-    }
-
-    renderSimilarMovies(movies) {
-        this.renderRelatedMovies(movies, false);
-    }
-
-    createRelatedCard(movie, isLocal) {
-        const posterUrl = isLocal ? 
-            (movie.poster || (movie.poster_path ? `${this.IMG_BASE}${movie.poster_path}` : null)) :
-            (movie.poster_path ? `${this.IMG_BASE}${movie.poster_path}` : null);
-
-        const title = this.escapeHtml(movie.title || movie.movie || 'Untitled');
-        const year = isLocal ? 
-            (movie.year || (movie.release_date ? new Date(movie.release_date).getFullYear() : '')) :
-            (movie.release_date ? new Date(movie.release_date).getFullYear() : '');
-
-        const dataAttribute = isLocal ? `data-local-id="${movie.id}"` : `data-id="${movie.id}"`;
-
+    
+    // Show top 12 cast members
+    const topCast = credits.cast.slice(0, 12);
+    
+    castGridEl.innerHTML = topCast.map(person => {
+        const photoUrl = person.profile_path ? `${IMG_BASE}${person.profile_path}` : '';
         return `
-            <div class="related-card movie-card" ${dataAttribute} role="button" tabindex="0">
-                ${posterUrl 
-                    ? `<img class="card-poster" src="${posterUrl}" alt="${title}" loading="lazy">` 
-                    : '<div class="card-poster no-poster"><span>No Image</span></div>'
+            <div class="cast-card">
+                ${photoUrl ? 
+                    `<img src="${photoUrl}" alt="${escapeHtml(person.name)}" class="cast-photo">` :
+                    '<div class="cast-photo" style="background: var(--card-bg); display: flex; align-items: center; justify-content: center; color: #666;">No Photo</div>'
                 }
-                <div class="card-info">
-                    <div class="card-title">${title}</div>
-                    ${year ? `<div class="card-year">${year}</div>` : ''}
+                <div class="cast-info">
+                    <div class="cast-name">${escapeHtml(person.name)}</div>
+                    <div class="cast-character">${escapeHtml(person.character || 'Unknown Role')}</div>
                 </div>
             </div>
         `;
+    }).join('');
+}
+
+function renderCrew(credits) {
+    if (!credits.crew || credits.crew.length === 0) {
+        crewListEl.innerHTML = '<p>No crew information available.</p>';
+        return;
     }
+    
+    // Filter important crew members
+    const importantJobs = ['Director', 'Producer', 'Executive Producer', 'Screenplay', 'Story', 'Music', 'Cinematography', 'Editor'];
+    const importantCrew = credits.crew.filter(person => 
+        importantJobs.some(job => person.job.includes(job))
+    ).slice(0, 20);
+    
+    crewListEl.innerHTML = importantCrew.map(person => `
+        <div class="crew-item">
+            <span class="crew-name">${escapeHtml(person.name)}</span>
+            <span class="crew-job">${escapeHtml(person.job)}</span>
+        </div>
+    `).join('');
+}
 
-    // Action Functions
-    playMovie() {
-        if (this.isLocalMovie && this.localId) {
-            window.location.href = `watch.html?localId=${encodeURIComponent(this.localId)}`;
-        } else if (this.movieId) {
-            window.location.href = `watch.html?id=${encodeURIComponent(this.movieId)}`;
-        }
-    }
-
-    async playTrailer() {
-        if (this.isLocalMovie) {
-            this.showNotification('Trailer not available for local movies');
-            return;
-        }
-
-        try {
-            this.elements.trailerTitle.textContent = 'Loading trailer...';
-            this.elements.trailerModal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-
-            const trailerKey = await this.fetchTrailerKey();
-
-            if (trailerKey) {
-                this.openTrailer(trailerKey);
-            } else {
-                this.closeTrailer();
-                this.showNotification('No trailer available for this movie');
-            }
-        } catch (error) {
-            console.error('Error loading trailer:', error);
-            this.closeTrailer();
-            this.showNotification('Failed to load trailer');
-        }
-    }
-
-    downloadMovie() {
-        if (this.isLocalMovie && this.movieData && this.movieData.download) {
-            window.open(this.movieData.download, '_blank');
-            this.showNotification('Download started');
-        } else if (this.movieId) {
-            window.open(`/api/download/${this.movieId}?quality=1080p`, '_blank');
-            this.showNotification('Download started');
+// Trailer Functions
+async function loadTrailer() {
+    try {
+        const videos = await fetchMovieVideos(currentMovieId);
+        const trailer = videos.results.find(video => 
+            video.type === 'Trailer' && video.site === 'YouTube'
+        );
+        
+        if (trailer) {
+            const embedUrl = `https://www.youtube.com/embed/${trailer.key}`;
+            trailerIframe.src = embedUrl;
+            trailerModal.classList.remove('hidden');
         } else {
-            this.showNotification('Download not available');
+            alert('No trailer available for this movie.');
         }
+    } catch (error) {
+        console.error('Error loading trailer:', error);
+        alert('Failed to load trailer.');
     }
+}
 
-    async fetchTrailerKey() {
-        if (this.isLocalMovie) return null;
+function closeTrailer() {
+    trailerModal.classList.add('hidden');
+    trailerIframe.src = '';
+}
 
-        try {
-            const response = await this.fetchFromAPI(`movie/${this.movieId}/videos`);
-            const videos = response.results || [];
+// Main Load Function
+async function loadMovie() {
+    currentMovieId = getMovieIdFromUrl();
+    
+    if (!currentMovieId) {
+        showError('No movie ID provided in the URL.');
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        // Fetch movie data and credits in parallel
+        const [movieData, creditsData] = await Promise.all([
+            fetchMovieData(currentMovieId),
+            fetchMovieCredits(currentMovieId)
+        ]);
+        
+        renderMovieDetails(movieData);
+        renderCast(creditsData);
+        renderCrew(creditsData);
+        
+        showMovieDetails();
+        hideLoading();
+        
+    } catch (error) {
+        console.error('Error loading movie:', error);
+        showError('Failed to load movie details. Please try again later.');
+    }
+}
 
-            const youtubeVideo = videos.find(video => 
-                video.site === 'YouTube' && 
-                (video.type === 'Trailer' || video.type === 'Teaser')
-            );
+// Event Listeners
+document.addEventListener('DOMContentLoaded', loadMovie);
 
-            return youtubeVideo?.key 
+retryBtn.addEventListener('click', loadMovie);
+
+playBtn.addEventListener('click', loadTrailer);
+
+closeModalBtn.addEventListener('click', closeTrailer);
+
+trailerModal.addEventListener('click', (e) => {
+    if (e.target === trailerModal) {
+        closeTrailer();
+    }
+});
+
+// Handle escape key to close trailer
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !trailerModal.classList.contains('hidden')) {
+        closeTrailer();
+    }
+});
