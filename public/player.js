@@ -1,6 +1,6 @@
 /**
  * FilmyFeed Player (Enhanced)
- * Supports both local JSON movies and TMDb streaming
+ * CORRECTED version with proper local movie support
  */
 
 class FilmyFeedPlayer {
@@ -82,16 +82,35 @@ class FilmyFeedPlayer {
 
     wireEvents() {
         const v = this.video;
+
+        // Video events
         v.addEventListener('loadedmetadata', () => {
+            console.log('Video metadata loaded');
             this.updateDuration();
             this.hide(this.elements.loading);
         });
+
         v.addEventListener('timeupdate', () => this.updateProgress());
         v.addEventListener('progress', () => this.updateBuffer());
         v.addEventListener('waiting', () => this.show(this.elements.loading));
         v.addEventListener('canplay', () => this.hide(this.elements.loading));
-        v.addEventListener('error', () => this.fail('Video error'));
 
+        v.addEventListener('error', (e) => {
+            console.error('Video error:', e);
+            this.fail('Video error occurred');
+        });
+
+        v.addEventListener('play', () => {
+            this.elements.play.textContent = 'â¸';
+            this.elements.playbig.classList.add('hidden');
+        });
+
+        v.addEventListener('pause', () => {
+            this.elements.play.textContent = 'â–¶';
+            this.elements.playbig.classList.remove('hidden');
+        });
+
+        // Control events
         this.elements.play.addEventListener('click', () => this.toggle());
         this.elements.playbig.addEventListener('click', () => this.toggle());
         this.elements.full.addEventListener('click', () => this.fullscreen());
@@ -108,6 +127,7 @@ class FilmyFeedPlayer {
         this.elements.quality.addEventListener('click', () => this.toggleQMenu());
         this.elements.sub.addEventListener('click', () => this.toggleSubtitles());
 
+        // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') { e.preventDefault(); this.toggle(); }
             if (e.code === 'KeyF') { this.fullscreen(); }
@@ -118,13 +138,14 @@ class FilmyFeedPlayer {
         });
     }
 
-    // Load local movie from JSON data
+    // CORRECTED: Load local movie from JSON data
     async loadLocalMovie(movieData) {
         try {
+            console.log('Loading local movie:', movieData);
             this.show(this.elements.loading);
 
             // Update UI with movie info
-            this.elements.title.textContent = movieData.title || 'Movie';
+            this.elements.title.textContent = movieData.movie || movieData.title || 'Movie';
             const year = movieData.year || '';
             const language = movieData.language ? movieData.language.toUpperCase() : '';
             const rating = movieData.rating ? `â˜… ${movieData.rating}` : '';
@@ -136,15 +157,20 @@ class FilmyFeedPlayer {
                 this.customDownloadUrl = movieData.download;
             }
 
-            // Load HLS stream
-            await this.attachHLS(movieData.watch);
+            // CORRECTED: Load video stream
+            if (movieData.watch) {
+                await this.attachVideo(movieData.watch);
+            } else {
+                throw new Error('No watch URL provided');
+            }
 
             if (this.autoplay) {
-                this.video.play().catch(() => {});
+                this.video.play().catch(console.error);
             }
 
         } catch (e) {
-            this.fail('Failed to load local movie');
+            console.error('Failed to load local movie:', e);
+            this.fail(`Failed to load movie: ${e.message}`);
         }
     }
 
@@ -152,6 +178,7 @@ class FilmyFeedPlayer {
     async load(movieId) {
         this.movieId = movieId;
         try {
+            console.log('Loading TMDb movie:', movieId);
             this.show(this.elements.loading);
 
             // Get movie metadata
@@ -161,14 +188,29 @@ class FilmyFeedPlayer {
             this.elements.meta.textContent = `${year} â€¢ TMDb`;
 
             const manifest = `${this.API}/stream/${movieId}/manifest.m3u8`;
-            await this.attachHLS(manifest);
+            await this.attachVideo(manifest);
 
             if (this.autoplay) {
-                this.video.play().catch(() => {});
+                this.video.play().catch(console.error);
             }
 
         } catch (e) {
-            this.fail('Failed to load video');
+            console.error('Failed to load TMDb movie:', e);
+            this.fail('Failed to load video from server');
+        }
+    }
+
+    // CORRECTED: Universal video attachment (HLS or direct video)
+    async attachVideo(videoUrl) {
+        console.log('Attaching video:', videoUrl);
+        const v = this.video;
+
+        // Check if it's an HLS stream
+        if (videoUrl.includes('.m3u8')) {
+            return this.attachHLS(videoUrl);
+        } else {
+            // Direct video (MP4, WebM, etc.)
+            return this.attachDirectVideo(videoUrl);
         }
     }
 
@@ -196,7 +238,7 @@ class FilmyFeedPlayer {
             this.hls.on(Hls.Events.ERROR, (_, data) => {
                 console.error('HLS error:', data);
                 if (data.fatal) {
-                    this.fail('Streaming error');
+                    this.fail(`HLS error: ${data.details}`);
                 }
             });
 
@@ -208,7 +250,28 @@ class FilmyFeedPlayer {
             v.src = manifestUrl;
 
         } else {
-            this.fail('HLS not supported');
+            this.fail('HLS not supported in this browser');
+        }
+    }
+
+    async attachDirectVideo(videoUrl) {
+        console.log('Attaching direct video:', videoUrl);
+        const v = this.video;
+
+        try {
+            v.src = videoUrl;
+
+            // Hide quality menu for direct video
+            this.elements.quality.style.display = 'none';
+
+            return new Promise((resolve, reject) => {
+                v.addEventListener('loadedmetadata', resolve, { once: true });
+                v.addEventListener('error', reject, { once: true });
+            });
+
+        } catch (error) {
+            console.error('Error loading direct video:', error);
+            this.fail(`Failed to load video: ${error.message}`);
         }
     }
 
@@ -256,13 +319,9 @@ class FilmyFeedPlayer {
 
     toggle() {
         if (this.video.paused) { 
-            this.video.play(); 
-            this.elements.play.textContent = 'â¸'; 
-            this.elements.playbig.classList.add('hidden'); 
+            this.video.play().catch(console.error); 
         } else { 
             this.video.pause(); 
-            this.elements.play.textContent = 'â–¶'; 
-            this.elements.playbig.classList.remove('hidden'); 
         }
     }
 
@@ -283,16 +342,17 @@ class FilmyFeedPlayer {
 
     updateProgress() {
         const v = this.video;
-        const pct = (v.currentTime / (v.duration || 1)) * 100;
+        if (!v.duration) return;
+        const pct = (v.currentTime / v.duration) * 100;
         this.elements.played.style.width = pct + '%';
         this.elements.cur.textContent = this.fmt(v.currentTime);
     }
 
     updateBuffer() {
         const v = this.video; 
-        if (!v.buffered || v.buffered.length === 0) return;
+        if (!v.buffered || v.buffered.length === 0 || !v.duration) return;
         const end = v.buffered.end(v.buffered.length - 1);
-        const pct = (end / (v.duration || 1)) * 100;
+        const pct = (end / v.duration) * 100;
         this.elements.buffer.style.width = pct + '%';
     }
 
@@ -303,6 +363,8 @@ class FilmyFeedPlayer {
         } else if (this.movieId) {
             // Use TMDb download endpoint
             window.open(`${this.API}/download/${this.movieId}?quality=1080p`, '_blank');
+        } else {
+            console.log('No download URL available');
         }
     }
 
@@ -311,6 +373,7 @@ class FilmyFeedPlayer {
         const existing = this.video.querySelector('track');
         if (existing) { 
             existing.remove(); 
+            this.elements.sub.style.opacity = '0.6';
             return; 
         }
 
@@ -321,11 +384,17 @@ class FilmyFeedPlayer {
         track.src = `/subtitles/${this.movieId}.vtt`;
         track.default = true;
         this.video.appendChild(track);
+        this.elements.sub.style.opacity = '1';
     }
 
     reload() { 
-        if (this.movieId) {
-            this.load(this.movieId); 
+        console.log('Reloading player');
+        this.hide(this.elements.error);
+        this.show(this.elements.loading);
+
+        // Reload the current source
+        if (this.video.src) {
+            this.video.load();
         }
     }
 
@@ -354,6 +423,7 @@ class FilmyFeedPlayer {
     }
 
     fail(msg) { 
+        console.error('Player failed:', msg);
         this.elements.errmsg.textContent = msg; 
         this.show(this.elements.error); 
         this.hide(this.elements.loading); 
