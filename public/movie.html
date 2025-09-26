@@ -8,7 +8,7 @@
     <meta name="description" content="Movie Details - FilmyFeed">
     <title>Movie Details - FilmyFeed</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Netflix+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 
     <!-- Mobile app optimizations -->
@@ -29,7 +29,7 @@
                     </svg>
                 </button>
                 <div class="brand-logo">
-                    <img src="logo.png" alt="FilmyFeed" class="logo-img">
+                    <img src="logo.png" alt="FilmyFeed" class="logo-img" onerror="this.style.display='none'">
                     <span class="brand-text">FILMYFEED</span>
                 </div>
             </div>
@@ -84,8 +84,8 @@
                     <img id="movie-poster" class="movie-poster" alt="Movie Poster">
                 </div>
                 <div class="movie-basic-info">
-                    <h1 id="movie-title" class="movie-title"></h1>
-                    <div class="movie-meta" id="movie-meta"></div>
+                    <h1 id="movie-title" class="movie-title">Loading...</h1>
+                    <div class="movie-meta" id="movie-meta">Loading...</div>
                     <div class="movie-genres" id="movie-genres"></div>
                 </div>
             </div>
@@ -106,14 +106,14 @@
                     </svg>
                     <span>Watch Trailer</span>
                 </button>
+                <button class="btn-icon" id="download-btn" aria-label="Download">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                    </svg>
+                </button>
                 <button class="btn-icon" id="add-list-btn" aria-label="Add to My List">
                     <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 5v14m-7-7h14"/>
-                    </svg>
-                </button>
-                <button class="btn-icon" id="like-btn" aria-label="Like">
-                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
                     </svg>
                 </button>
             </div>
@@ -124,7 +124,7 @@
             <!-- Overview -->
             <div class="detail-item">
                 <h3 class="detail-title">Plot</h3>
-                <p id="movie-overview" class="detail-text"></p>
+                <p id="movie-overview" class="detail-text">Loading plot...</p>
             </div>
 
             <!-- Cast & Crew -->
