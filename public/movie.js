@@ -1,8 +1,8 @@
-// Movie page JavaScript - WORKING VERSION
+// Movie Details Page JavaScript - Working Version
 
 console.log('Movie script loaded');
 
-// Get elements
+// DOM Elements
 const loadingEl = document.getElementById('loading');
 const errorEl = document.getElementById('error');
 const errorMessageEl = document.getElementById('error-message');
@@ -20,15 +20,45 @@ const movieGenresEl = document.getElementById('movie-genres');
 const movieDescriptionEl = document.getElementById('movie-description');
 const voteAverageEl = document.getElementById('vote-average');
 const voteCountEl = document.getElementById('vote-count');
+const movieBudgetEl = document.getElementById('movie-budget');
+const movieRevenueEl = document.getElementById('movie-revenue');
 const castGridEl = document.getElementById('cast-grid');
 
 const IMG_BASE = 'https://image.tmdb.org/t/p/w500';
 
+// Utility Functions
 function getMovieIdFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('id');
 }
 
+function formatCurrency(amount) {
+    if (!amount || amount === 0) return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(amount);
+}
+
+function formatRuntime(minutes) {
+    if (!minutes) return 'N/A';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+// UI Functions
 function showLoading() {
     console.log('Showing loading...');
     loadingEl.classList.remove('hidden');
@@ -56,20 +86,20 @@ function showMovieDetails() {
     loadingEl.classList.add('hidden');
 }
 
+// API Functions
 async function fetchMovieData(movieId) {
     console.log('Fetching movie data for ID:', movieId);
     
     try {
         const response = await fetch(`/api/movie?id=${movieId}`);
         console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers.get('content-type'));
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
         const result = await response.json();
-        console.log('API Response:', result);
+        console.log('Movie API Response:', result);
         
         if (!result.success) {
             throw new Error(result.error || 'API returned error');
@@ -77,7 +107,7 @@ async function fetchMovieData(movieId) {
         
         return result.data;
     } catch (error) {
-        console.error('Fetch error:', error);
+        console.error('Fetch movie error:', error);
         throw error;
     }
 }
@@ -98,25 +128,28 @@ async function fetchCredits(movieId) {
     }
 }
 
+// Render Functions
 function renderMovieDetails(movie) {
     console.log('Rendering movie:', movie.title);
     
     // Basic info
     movieTitleEl.textContent = movie.title || 'Unknown Title';
     movieTaglineEl.textContent = movie.tagline || '';
+    movieTaglineEl.style.display = movie.tagline ? 'block' : 'none';
     
     // Poster
     if (movie.poster_path) {
         moviePosterEl.src = IMG_BASE + movie.poster_path;
         moviePosterEl.alt = movie.title + ' Poster';
+    } else {
+        moviePosterEl.style.display = 'none';
     }
     
     // Meta info
     const year = movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A';
     movieYearEl.textContent = year;
     
-    const runtime = movie.runtime ? `${Math.floor(movie.runtime / 60)}h ${movie.runtime % 60}m` : 'N/A';
-    movieRuntimeEl.textContent = runtime;
+    movieRuntimeEl.textContent = formatRuntime(movie.runtime);
     
     const rating = movie.vote_average ? `⭐ ${movie.vote_average.toFixed(1)}` : 'N/A';
     movieRatingEl.textContent = rating;
@@ -124,7 +157,7 @@ function renderMovieDetails(movie) {
     // Genres
     if (movie.genres && movie.genres.length > 0) {
         movieGenresEl.innerHTML = movie.genres
-            .map(g => `<span style="background: var(--accent); color: white; padding: 0.3rem 0.8rem; border-radius: 15px; font-size: 0.8rem;">${g.name}</span>`)
+            .map(g => `<span class="genre-tag">${escapeHtml(g.name)}</span>`)
             .join('');
     }
     
@@ -134,6 +167,8 @@ function renderMovieDetails(movie) {
     // Stats
     voteAverageEl.textContent = movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A';
     voteCountEl.textContent = movie.vote_count ? movie.vote_count.toLocaleString() : 'N/A';
+    movieBudgetEl.textContent = formatCurrency(movie.budget);
+    movieRevenueEl.textContent = formatCurrency(movie.revenue);
     
     // Update title
     document.title = `${movie.title} - FilmyFeed`;
@@ -152,16 +187,17 @@ function renderCast(credits) {
         return `
             <div class="cast-card">
                 ${photoUrl ? 
-                    `<img src="${photoUrl}" alt="${person.name}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 5px; margin-bottom: 0.5rem;">` :
-                    '<div style="width: 100%; height: 150px; background: #333; border-radius: 5px; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; color: #666;">No Photo</div>'
+                    `<img src="${photoUrl}" alt="${escapeHtml(person.name)}" class="cast-photo">` :
+                    '<div class="cast-photo" style="background: #333; display: flex; align-items: center; justify-content: center; color: #666;">No Photo</div>'
                 }
-                <div style="font-weight: bold; font-size: 0.9rem;">${person.name}</div>
-                <div style="color: #aaa; font-size: 0.8rem;">${person.character || 'Unknown'}</div>
+                <div class="cast-name">${escapeHtml(person.name)}</div>
+                <div class="cast-character">${escapeHtml(person.character || 'Unknown Role')}</div>
             </div>
         `;
     }).join('');
 }
 
+// Main Load Function
 async function loadMovie() {
     const movieId = getMovieIdFromUrl();
     
@@ -175,12 +211,14 @@ async function loadMovie() {
     showLoading();
     
     try {
-        // Fetch movie data
-        const movieData = await fetchMovieData(movieId);
-        console.log('Got movie data:', movieData);
+        // Fetch movie data and credits
+        console.log('Fetching movie data and credits...');
+        const [movieData, creditsData] = await Promise.all([
+            fetchMovieData(movieId),
+            fetchCredits(movieId)
+        ]);
         
-        // Fetch credits (optional)
-        const creditsData = await fetchCredits(movieId);
+        console.log('Got movie data:', movieData);
         console.log('Got credits data:', creditsData);
         
         // Render everything
