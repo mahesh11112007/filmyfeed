@@ -121,12 +121,6 @@ body {
   gap: var(--space-sm);
 }
 
-.logo-img {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-}
-
 .brand-text {
   font-size: 1.1rem;
   font-weight: 700;
@@ -140,7 +134,7 @@ body {
   gap: var(--space-sm);
 }
 
-.search-btn, .profile-btn {
+.search-btn, .profile-btn, .back-btn, .share-btn {
   width: 44px;
   height: 44px;
   background: transparent;
@@ -152,9 +146,10 @@ body {
   justify-content: center;
   border-radius: 22px;
   transition: background-color 0.2s ease;
+  font-size: 1.2rem;
 }
 
-.search-btn:active, .profile-btn:active {
+.search-btn:active, .profile-btn:active, .back-btn:active, .share-btn:active {
   background: rgba(255, 255, 255, 0.1);
 }
 
@@ -461,7 +456,7 @@ body {
 }
 
 /* Loading States */
-.loading-placeholder {
+.loading-placeholder, .movie-loading, .status-message {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -483,17 +478,6 @@ body {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
-}
-
-/* Status Messages */
-.status-message {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-2xl);
-  text-align: center;
-  color: var(--text-secondary);
 }
 
 .status-message.error {
@@ -580,17 +564,6 @@ body {
 @media (hover: none) and (pointer: coarse) {
   .movie-card:hover {
     transform: none;
-  }
-}
-
-/* Accessibility */
-@media (prefers-reduced-motion: reduce) {
-  .loading-spinner {
-    animation: none;
-  }
-
-  * {
-    transition-duration: 0.01ms !important;
   }
 }
 
