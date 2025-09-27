@@ -1,12 +1,14 @@
 {
   "version": 2,
-  "name": "filmyfeed",
   "builds": [
-    { "src": "server.js", "use": "@vercel/node" },
-    { "src": "public/**/*", "use": "@vercel/static" }
+    { "src": "server.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/server.js" },
+    { "src": "/", "dest": "/public/index.html" },         // Add this line
     { "src": "/(.*)", "dest": "/public/$1" }
-  ]
+  ],
+  "functions": {
+    "server.js": { "maxDuration": 30 }
+  }
 }
