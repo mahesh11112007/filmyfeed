@@ -1,0 +1,10 @@
+[
+  {
+    "id": "101",
+    "title": "Sample Local Movie",
+    "overview": "This is a test movie stored in movies.json.",
+    "poster": "https://image.tmdb.org/t/p/w500/your-poster-path.jpg",
+    "backdrop": "https://image.tmdb.org/t/p/w1280/your-backdrop-path.jpg",
+    "streamUrl": "https://www.w3schools.com/html/mov_bbb.mp4"
+  }
+]
