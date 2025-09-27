@@ -1,10 +1,12 @@
 /**
- * FilmyFeed Movie Details Page - CORRECTED
- * Simplified version that works with basic JSON structure (movie, id, watch, download)
+ * FilmyFeed Movie Details Page - CORRECTED FOR TMDb ENRICHMENT
+ * Uses only movie, id, watch, download from movies.json
+ * All images and metadata come from TMDb API
  */
 class MovieDetailsApp {
     constructor() {
-        this.API_BASE = '/api';
+        // TMDb API configuration - you need to add your API key in server.js
+        this.API_BASE = '/api/tmdb';
         this.IMG_BASE = 'https://image.tmdb.org/t/p/w500';
         this.BACKDROP_BASE = 'https://image.tmdb.org/t/p/original';
 
@@ -50,13 +52,7 @@ class MovieDetailsApp {
             movieRating: document.getElementById('movie-rating'),
 
             // Related movies
-            relatedMovies: document.getElementById('related-movies'),
-
-            // Trailer modal
-            trailerModal: document.getElementById('trailer-modal'),
-            trailerClose: document.getElementById('trailer-close'),
-            trailerIframe: document.getElementById('trailer-iframe'),
-            trailerTitle: document.getElementById('trailer-title')
+            relatedMovies: document.getElementById('related-movies')
         };
 
         this.init();
@@ -64,16 +60,17 @@ class MovieDetailsApp {
 
     async init() {
         try {
+            console.log('Initializing MovieDetailsApp...');
             this.setupEventListeners();
             this.extractParams();
             await this.loadLocalMovies();
 
             if (this.localId) {
-                console.log('Loading local movie:', this.localId);
+                console.log('Loading local movie with localId:', this.localId);
                 this.isLocalMovie = true;
                 await this.loadLocalMovieDetails();
             } else if (this.movieId) {
-                console.log('Loading TMDb movie:', this.movieId);
+                console.log('Loading TMDb movie with id:', this.movieId);
                 this.isLocalMovie = false;
                 await this.loadTMDbMovieDetails();
             } else {
@@ -87,7 +84,7 @@ class MovieDetailsApp {
     }
 
     setupEventListeners() {
-        // Navigation - Fixed to work properly
+        // Navigation buttons
         if (this.elements.backBtn) {
             this.elements.backBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -98,7 +95,7 @@ class MovieDetailsApp {
         if (this.elements.searchBtn) {
             this.elements.searchBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                window.location.href = 'index.html';
+                window.location.href = '/index.html';
             });
         }
 
@@ -109,7 +106,7 @@ class MovieDetailsApp {
             });
         }
 
-        // Action buttons - Fixed to work with basic JSON structure
+        // Action buttons
         if (this.elements.playBtn) {
             this.elements.playBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -137,55 +134,6 @@ class MovieDetailsApp {
                 this.playTrailer();
             });
         }
-
-        if (this.elements.addListBtn) {
-            this.elements.addListBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.toggleMyList();
-            });
-        }
-
-        // Trailer modal
-        if (this.elements.trailerClose) {
-            this.elements.trailerClose.addEventListener('click', () => {
-                this.closeTrailer();
-            });
-        }
-
-        if (this.elements.trailerModal) {
-            this.elements.trailerModal.addEventListener('click', (e) => {
-                if (e.target === this.elements.trailerModal) {
-                    this.closeTrailer();
-                }
-            });
-        }
-
-        // Error retry
-        if (this.elements.movieError) {
-            this.elements.movieError.addEventListener('click', () => {
-                if (this.localId) {
-                    this.loadLocalMovieDetails();
-                } else if (this.movieId) {
-                    this.loadTMDbMovieDetails();
-                }
-            });
-        }
-
-        // Related movies clicks
-        document.addEventListener('click', (e) => {
-            const relatedCard = e.target.closest('.related-card');
-            if (relatedCard) {
-                e.preventDefault();
-                const localId = relatedCard.dataset.localId;
-                const tmdbId = relatedCard.dataset.id;
-
-                if (localId) {
-                    window.location.href = `movie.html?localId=${encodeURIComponent(localId)}`;
-                } else if (tmdbId) {
-                    window.location.href = `movie.html?id=${encodeURIComponent(tmdbId)}`;
-                }
-            }
-        });
     }
 
     extractParams() {
@@ -197,19 +145,13 @@ class MovieDetailsApp {
 
     async loadLocalMovies() {
         try {
+            console.log('Loading movies.json...');
             const response = await fetch('/movies.json');
             if (!response.ok) {
-                // Try alternative path
-                const response2 = await fetch('/data/movies.json');
-                if (response2.ok) {
-                    this.localMovies = await response2.json();
-                } else {
-                    throw new Error('Could not load movies.json from any location');
-                }
-            } else {
-                this.localMovies = await response.json();
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-            console.log(`Loaded ${this.localMovies.length} local movies`);
+            this.localMovies = await response.json();
+            console.log('Loaded local movies:', this.localMovies);
         } catch (error) {
             console.error('Error loading movies.json:', error);
             this.localMovies = [];
@@ -220,28 +162,23 @@ class MovieDetailsApp {
         this.showLoading();
 
         try {
+            console.log('Finding local movie with localId:', this.localId);
+
             // Find the local movie by ID
             const movie = this.localMovies.find(m => 
-                String(m.id) === String(this.localId) || 
-                m.movie === this.localId
+                String(m.id) === String(this.localId)
             );
 
             if (!movie) {
-                throw new Error(`Local movie not found: ${this.localId}`);
+                throw new Error(`Local movie not found with id: ${this.localId}`);
             }
 
             console.log('Found local movie:', movie);
-            this.movieData = movie;
 
-            // Try to enrich with TMDb if numeric ID exists
-            if (movie.id && typeof movie.id === 'number' && movie.id > 1000) {
-                try {
-                    this.movieData = await this.enrichWithTMDb(movie);
-                } catch (enrichError) {
-                    console.log('TMDb enrichment failed, using basic data:', enrichError);
-                    // Keep original movie data if enrichment fails
-                }
-            }
+            // ALWAYS enrich with TMDb data for images and metadata
+            this.movieData = await this.enrichWithTMDb(movie);
+
+            console.log('Enriched movie data:', this.movieData);
 
             this.renderMovieDetails();
             this.updatePageTitle();
@@ -277,17 +214,30 @@ class MovieDetailsApp {
 
     async enrichWithTMDb(localMovie) {
         if (!localMovie.id || typeof localMovie.id !== 'number') {
+            console.log('No valid TMDb ID found, using basic local data only');
             return localMovie;
         }
 
         try {
+            console.log('Enriching with TMDb data for movie ID:', localMovie.id);
+
             const [details, credits] = await Promise.all([
                 this.fetchFromAPI(`movie/${localMovie.id}`),
                 this.fetchFromAPI(`movie/${localMovie.id}/credits`)
             ]);
 
-            return {
-                ...localMovie,
+            console.log('TMDb details received:', details);
+            console.log('TMDb credits received:', credits);
+
+            // Merge TMDb data with local data, keeping local watch/download links
+            const enrichedMovie = {
+                // Keep original local data
+                movie: localMovie.movie,
+                id: localMovie.id,
+                watch: localMovie.watch,
+                download: localMovie.download,
+
+                // Add TMDb data
                 title: details.title || localMovie.movie,
                 year: details.release_date ? new Date(details.release_date).getFullYear() : null,
                 language: details.original_language?.toUpperCase(),
@@ -302,66 +252,75 @@ class MovieDetailsApp {
                 release_date: details.release_date,
                 vote_average: details.vote_average,
                 spoken_languages: details.spoken_languages,
+
+                // Store full TMDb data for reference
                 _tmdbDetails: details,
                 _tmdbCredits: credits
             };
+
+            console.log('Movie enriched with TMDb data:', enrichedMovie);
+            return enrichedMovie;
+
         } catch (error) {
-            console.log('TMDb enrichment failed for', localMovie.movie, error);
-            return localMovie;
+            console.error('TMDb enrichment failed for', localMovie.movie, error);
+            // Return original local movie data if enrichment fails
+            return {
+                ...localMovie,
+                title: localMovie.movie // Fallback title
+            };
         }
     }
 
     renderMovieDetails() {
-        if (!this.movieData) return;
+        if (!this.movieData) {
+            console.error('No movie data to render');
+            return;
+        }
 
-        console.log('Rendering movie details:', this.movieData);
+        console.log('Rendering movie details for:', this.movieData.title || this.movieData.movie);
 
-        // Hero backdrop
+        // Hero backdrop from TMDb
         const backdropUrl = this.movieData.backdrop || 
                            (this.movieData.backdrop_path ? `${this.BACKDROP_BASE}${this.movieData.backdrop_path}` : null);
 
         if (backdropUrl && this.elements.movieBackdrop) {
             this.elements.movieBackdrop.style.backgroundImage = `url(${backdropUrl})`;
+            console.log('Set backdrop:', backdropUrl);
         }
 
-        // Movie poster  
+        // Movie poster from TMDb
         const posterUrl = this.movieData.poster ||
                          (this.movieData.poster_path ? `${this.IMG_BASE}${this.movieData.poster_path}` : null);
 
         if (posterUrl && this.elements.moviePoster) {
             this.elements.moviePoster.src = posterUrl;
             this.elements.moviePoster.alt = `${this.movieData.title || this.movieData.movie} poster`;
+            console.log('Set poster:', posterUrl);
         }
 
-        // Basic info
+        // Movie title
         if (this.elements.movieTitle) {
             this.elements.movieTitle.textContent = this.movieData.title || this.movieData.movie || 'Untitled';
         }
 
-        // Meta information
+        // Meta information (year, language, rating)
         this.renderMovieMeta();
 
-        // Genres
+        // Genres from TMDb
         this.renderGenres();
 
-        // Overview
+        // Overview from TMDb
         if (this.elements.movieOverview) {
             this.elements.movieOverview.textContent = this.movieData.overview || 'No overview available.';
         }
 
-        // Movie details
+        // Movie details from TMDb
         this.renderMovieInfo();
 
-        // Cast & Crew
+        // Cast & Crew from TMDb
         this.renderCastCrew();
 
-        // Related movies (show other local movies)
-        if (this.isLocalMovie && this.localMovies.length > 1) {
-            const otherMovies = this.localMovies.filter(m => 
-                String(m.id) !== String(this.localId) && m.movie !== this.localId
-            ).slice(0, 6);
-            this.renderRelatedMovies(otherMovies, true);
-        }
+        console.log('Movie details rendered successfully');
     }
 
     renderMovieMeta() {
@@ -448,48 +407,16 @@ class MovieDetailsApp {
         }
     }
 
-    renderRelatedMovies(movies, isLocal = false) {
-        if (!this.elements.relatedMovies || !movies || movies.length === 0) {
-            if (this.elements.relatedMovies) {
-                this.elements.relatedMovies.innerHTML = '<p>No related movies found.</p>';
-            }
-            return;
-        }
-
-        const moviesHTML = movies.map(movie => {
-            const title = movie.title || movie.movie || 'Untitled';
-            const year = movie.year || (movie.release_date ? new Date(movie.release_date).getFullYear() : '');
-            const poster = movie.poster || (movie.poster_path ? `${this.IMG_BASE}${movie.poster_path}` : '/placeholder.jpg');
-            const id = isLocal ? movie.id : movie.id;
-            const idParam = isLocal ? `localId=${encodeURIComponent(id)}` : `id=${encodeURIComponent(id)}`;
-
-            return `
-                <div class="related-card" ${isLocal ? `data-local-id="${id}"` : `data-id="${id}"`}>
-                    <img src="${poster}" alt="${this.escapeHtml(title)}" loading="lazy" 
-                         onerror="this.src='/placeholder.jpg'">
-                    <div class="related-info">
-                        <h4>${this.escapeHtml(title)}</h4>
-                        ${year ? `<span class="year">${year}</span>` : ''}
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        this.elements.relatedMovies.innerHTML = moviesHTML;
-    }
-
-    // Action methods - Fixed to work with basic JSON structure
+    // Action methods - Use local watch/download links
     playMovie() {
         if (this.isLocalMovie && this.movieData?.watch) {
-            // For local movies, redirect to watch page or direct link
+            console.log('Playing movie from local watch link:', this.movieData.watch);
+            // For local movies, use the watch link from movies.json
             if (this.movieData.watch.includes('.mp4') || this.movieData.watch.includes('http')) {
                 window.location.href = `watch.html?url=${encodeURIComponent(this.movieData.watch)}&title=${encodeURIComponent(this.movieData.title || this.movieData.movie)}`;
             } else {
                 window.open(this.movieData.watch, '_blank');
             }
-        } else if (!this.isLocalMovie) {
-            // For TMDb movies, might need different handling
-            window.location.href = `watch.html?id=${this.movieId}`;
         } else {
             alert('Watch link not available for this movie.');
         }
@@ -497,7 +424,8 @@ class MovieDetailsApp {
 
     downloadMovie() {
         if (this.isLocalMovie && this.movieData?.download) {
-            // Create a temporary anchor element to trigger download
+            console.log('Downloading movie from local download link:', this.movieData.download);
+            // For local movies, use the download link from movies.json
             const link = document.createElement('a');
             link.href = this.movieData.download;
             link.download = this.movieData.title || this.movieData.movie || 'movie';
@@ -511,23 +439,8 @@ class MovieDetailsApp {
     }
 
     playTrailer() {
-        if (this.movieData?.trailerUrl) {
-            this.openTrailerModal(this.movieData.trailerUrl, this.movieData.title || this.movieData.movie);
-        } else {
-            alert('Trailer not available for this movie.');
-        }
-    }
-
-    toggleMyList() {
-        // Basic implementation - could be enhanced with local storage
-        const button = this.elements.addListBtn;
-        if (button) {
-            if (button.textContent.includes('Remove')) {
-                button.innerHTML = '<i class="icon-plus"></i> My List';
-            } else {
-                button.innerHTML = '<i class="icon-check"></i> Remove from List';
-            }
-        }
+        // Could implement trailer from TMDb videos API in the future
+        alert('Trailer feature coming soon!');
     }
 
     shareMovie() {
@@ -538,7 +451,6 @@ class MovieDetailsApp {
                 url: window.location.href
             }).catch(console.error);
         } else {
-            // Fallback - copy to clipboard
             navigator.clipboard.writeText(window.location.href).then(() => {
                 alert('Movie link copied to clipboard!');
             }).catch(() => {
@@ -551,42 +463,27 @@ class MovieDetailsApp {
         if (window.history.length > 1) {
             window.history.back();
         } else {
-            window.location.href = 'index.html';
-        }
-    }
-
-    // Modal methods
-    openTrailerModal(trailerUrl, title) {
-        if (this.elements.trailerModal && this.elements.trailerIframe) {
-            this.elements.trailerIframe.src = trailerUrl;
-            if (this.elements.trailerTitle) {
-                this.elements.trailerTitle.textContent = `${title} - Trailer`;
-            }
-            this.elements.trailerModal.classList.add('active');
-        }
-    }
-
-    closeTrailer() {
-        if (this.elements.trailerModal && this.elements.trailerIframe) {
-            this.elements.trailerModal.classList.remove('active');
-            this.elements.trailerIframe.src = '';
+            window.location.href = '/index.html';
         }
     }
 
     // Loading/Error states
     showLoading() {
+        console.log('Showing loading state');
         if (this.elements.movieLoading) this.elements.movieLoading.style.display = 'flex';
         if (this.elements.movieError) this.elements.movieError.style.display = 'none';
         if (this.elements.movieContent) this.elements.movieContent.style.display = 'none';
     }
 
     showContent() {
+        console.log('Showing content');
         if (this.elements.movieLoading) this.elements.movieLoading.style.display = 'none';
         if (this.elements.movieError) this.elements.movieError.style.display = 'none';
         if (this.elements.movieContent) this.elements.movieContent.style.display = 'block';
     }
 
     showError(message) {
+        console.error('Showing error:', message);
         if (this.elements.movieLoading) this.elements.movieLoading.style.display = 'none';
         if (this.elements.movieContent) this.elements.movieContent.style.display = 'none';
         if (this.elements.movieError) {
@@ -595,8 +492,6 @@ class MovieDetailsApp {
             if (errorText) {
                 errorText.textContent = message;
             }
-        } else {
-            console.error(message);
         }
     }
 
@@ -607,14 +502,22 @@ class MovieDetailsApp {
 
     // API methods
     async fetchFromAPI(endpoint, params = {}) {
-        const url = new URL(`${this.API_BASE}/${endpoint}`);
-        Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+        try {
+            const url = new URL(`${this.API_BASE}/${endpoint}`);
+            Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
 
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`API request failed: ${response.status}`);
+            console.log('Fetching from API:', url.toString());
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('API fetch error:', error);
+            throw error;
         }
-        return response.json();
     }
 
     // Utility methods
@@ -630,22 +533,4 @@ class MovieDetailsApp {
             return new Date(dateString).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
-                day: 'numeric'
-            });
-        } catch {
-            return dateString;
-        }
-    }
-
-    formatRuntime(runtime) {
-        if (!runtime || typeof runtime !== 'number') return null;
-        const hours = Math.floor(runtime / 60);
-        const minutes = runtime % 60;
-        return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-    }
-}
-
-// Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.movieDetailsApp = new MovieDetailsApp();
-});
+                
