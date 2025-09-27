@@ -5,185 +5,88 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#000000">
-    <title>FilmyFeed - Stream Movies & Shows</title>
+    <title>FilmyFeed - Your Movie Destination</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="format-detection" content="telephone=no">
 </head>
-<body>
-    <!-- Mobile App Header -->
-    <header class="app-header">
-        <div class="header-container">
-            <div class="header-left">
-                <button class="menu-btn" id="menu-btn" aria-label="Menu">
-                    <div class="hamburger">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                </button>
-                <div class="brand-logo">
-                    <span class="brand-text">FILMYFEED</span>
-                </div>
-            </div>
-            <div class="header-right">
-                <button class="search-btn" id="search-btn" aria-label="Search">
-                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M21.53 20.47L17.689 16.629A8.5 8.5 0 1 0 16.629 17.689L20.47 21.53a.75.75 0 1 0 1.06-1.06zM3.5 10.5a7 7 0 1 1 14 0 7 7 0 0 1-14 0z"/>
-                    </svg>
-                </button>
-                <button class="profile-btn" id="profile-btn" aria-label="Profile">
-                    <div class="profile-avatar">U</div>
-                </button>
-            </div>
+<body class="home-page">
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-brand">FILMYFEED</div>
+        <div class="nav-actions">
+            <button id="search-btn" class="nav-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                    <path d="21 21L16.65 16.65" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </button>
         </div>
+    </nav>
 
-        <!-- Search Overlay -->
-        <div class="search-overlay" id="search-overlay">
-            <div class="search-container">
-                <div class="search-input-wrapper">
-                    <svg class="search-icon" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M21.53 20.47L17.689 16.629A8.5 8.5 0 1 0 16.629 17.689L20.47 21.53a.75.75 0 1 0 1.06-1.06zM3.5 10.5a7 7 0 1 1 14 0 7 7 0 0 1-14 0z"/>
-                    </svg>
-                    <input type="search" id="search-input" class="search-input" 
-                           placeholder="Search movies, shows..." autocomplete="off">
-                    <button class="search-close" id="search-close" aria-label="Close">
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M6 6l12 12M6 18L18 6"/>
-                        </svg>
-                    </button>
-                </div>
+    <!-- Search Overlay -->
+    <div id="search-overlay" class="search-overlay">
+        <div class="search-container">
+            <div class="search-header">
+                <input type="text" id="search-input" placeholder="Search movies..." autocomplete="off">
+                <button id="search-close" class="search-close">✕</button>
             </div>
+            <div id="search-results" class="search-results"></div>
         </div>
-    </header>
+    </div>
+
+    <!-- Loading State -->
+    <div id="page-loading" class="page-loading">
+        <div class="loading-spinner">
+            <div></div>
+            <span>Loading movies...</span>
+        </div>
+    </div>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <div id="main-content" class="main-content" style="display: none;">
         <!-- Hero Section -->
-        <section class="hero-section" id="hero-section">
-            <div class="hero-background" id="hero-background"></div>
-            <div class="hero-content">
-                <div class="hero-info">
-                    <h1 id="hero-title" class="hero-title">Discover Movies</h1>
-                    <div class="hero-meta">
-                        <span class="year">2024</span>
-                        <span class="rating">HD</span>
-                        <span class="genre">Entertainment</span>
-                    </div>
-                    <p id="hero-description" class="hero-description">
-                        Stream the latest movies and TV shows in high quality.
-                    </p>
+        <div class="hero-section">
+            <div id="hero-background" class="hero-background"></div>
+            <div class="hero-overlay">
+                <div class="hero-content">
+                    <h1 id="hero-title" class="hero-title">Welcome to FilmyFeed</h1>
+                    <p id="hero-description" class="hero-description">Discover amazing movies</p>
                     <div class="hero-actions">
-                        <button class="play-btn" id="hero-play-btn">
-                            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
+                        <button id="hero-play-btn" class="btn-play">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5V19L19 12L8 5Z"/>
                             </svg>
-                            <span>Play</span>
-                        </button>
-                        <button class="info-btn" id="hero-info-btn">
-                            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <span>More Info</span>
+                            Explore Movies
                         </button>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!-- Content Sections -->
-        <div class="content-wrapper">
-            <!-- Our Movies (Local JSON) -->
-            <section class="content-section" id="local-movies-section">
-                <div class="section-header">
-                    <h2 class="section-title">Our Movies</h2>
-                    <button class="see-all-btn">See All</button>
-                </div>
-                <div class="content-row" id="local-movies-row">
-                    <div class="loading-placeholder">
-                        <div class="loading-spinner"></div>
-                        <span>Loading movies...</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Featured Titles -->
-            <section class="content-section">
-                <div class="section-header">
-                    <h2 class="section-title">Featured titles</h2>
-                    <button class="see-all-btn">See All</button>
-                </div>
-                <div class="content-row" id="featured-row">
-                    <div class="loading-placeholder">
-                        <div class="loading-spinner"></div>
-                        <span>Loading featured titles...</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Movies Section -->
-            <section class="content-section">
-                <div class="section-header">
-                    <h2 class="section-title">Movies</h2>
-                    <button class="see-all-btn">See All</button>
-                </div>
-                <div class="content-row" id="movies-row">
-                    <div class="loading-placeholder">
-                        <div class="loading-spinner"></div>
-                        <span>Loading movies...</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Search Results -->
-            <section class="content-section hidden" id="search-results-section">
-                <div class="section-header">
-                    <h2 class="section-title" id="search-results-title">Search Results</h2>
-                </div>
-                <div class="search-grid" id="search-results-grid">
-                    <!-- Results here -->
-                </div>
-            </section>
         </div>
-    </main>
 
-    <!-- Navigation Tab Bar -->
-    <nav class="bottom-nav">
-        <button class="nav-item active" data-tab="home">
-            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-            </svg>
-            <span>Home</span>
-        </button>
-        <button class="nav-item" data-tab="search">
-            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M21.53 20.47L17.689 16.629A8.5 8.5 0 1 0 16.629 17.689L20.47 21.53a.75.75 0 1 0 1.06-1.06zM3.5 10.5a7 7 0 1 1 14 0 7 7 0 0 1-14 0z"/>
-            </svg>
-            <span>Search</span>
-        </button>
-        <button class="nav-item" data-tab="coming-soon">
-            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-            <span>Coming Soon</span>
-        </button>
-        <button class="nav-item" data-tab="downloads">
-            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-            </svg>
-            <span>Downloads</span>
-        </button>
-        <button class="nav-item" data-tab="more">
-            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-            </svg>
-            <span>More</span>
-        </button>
-    </nav>
+        <!-- Movies Section -->
+        <div class="movies-section">
+            <div class="container">
+                <!-- Local Movies -->
+                <div id="local-movies-section" class="movie-row-section">
+                    <h2>Available Movies</h2>
+                    <div id="local-movies-row" class="movie-row">
+                        <!-- Local movies will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Popular Movies from TMDb (optional) -->
+                <div id="popular-movies-section" class="movie-row-section" style="display: none;">
+                    <h2>Popular Movies</h2>
+                    <div id="popular-movies-row" class="movie-row">
+                        <!-- Popular movies will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
