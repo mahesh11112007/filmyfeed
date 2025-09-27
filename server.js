@@ -1,250 +1,195 @@
 const express = require('express');
-const axios = require('axios');
 const path = require('path');
-require('dotenv').config();
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuration
-const TMDB_API_KEY = process.env.TMDB_API_KEY || 'your_tmdb_api_key_here';
+// TMDb API configuration
+const TMDB_API_KEY = process.env.TMDB_API_KEY || 'YOUR_TMDB_API_KEY_HERE';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const CDN_BASE_URL = process.env.CDN_BASE_URL || 'https://cdn.filmyfeed.com';
 
 // Middleware
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// CORS headers for all requests
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Range');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    if (req.method === 'OPTIONS') {
-        res.sendStatus(200);
-    } else {
-        next();
-    }
-});
-
-// ==========================================
-// VIDEO STREAMING ENDPOINTS
-// ==========================================
-
-// HLS Master Manifest
-app.get('/api/stream/:movieId/manifest.m3u8', async (req, res) => {
+// TMDb API proxy endpoints
+app.get('/api/tmdb/movie/:id', async (req, res) => {
     try {
-        const { movieId } = req.params;
-        console.log(`ðŸŽ¬ HLS manifest request for movie ${movieId}`);
+        const { id } = req.params;
 
-        const manifest = generateHLSMasterPlaylist(movieId);
-
-        res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-        res.setHeader('Cache-Control', 'public, max-age=300');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.send(manifest);
-
-    } catch (error) {
-        console.error('Manifest error:', error);
-        res.status(500).json({ error: 'Failed to generate manifest' });
-    }
-});
-
-// Quality-specific playlist
-app.get('/api/stream/:movieId/:quality/index.m3u8', async (req, res) => {
-    try {
-        const { movieId, quality } = req.params;
-        console.log(`ðŸŽ¬ Quality playlist: ${quality} for movie ${movieId}`);
-
-        const playlist = generateQualityPlaylist(movieId, quality);
-
-        res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-        res.setHeader('Cache-Control', 'public, max-age=300');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.send(playlist);
-
-    } catch (error) {
-        console.error('Playlist error:', error);
-        res.status(500).json({ error: 'Failed to generate playlist' });
-    }
-});
-
-// Video segment proxy
-app.get('/api/stream/:movieId/:quality/segment:segmentId.ts', async (req, res) => {
-    try {
-        const { movieId, quality, segmentId } = req.params;
-        console.log(`ðŸŽ¬ Streaming segment: ${movieId}/${quality}/segment${segmentId}.ts`);
-
-        // Mock segment for demo - in production, proxy to your CDN
-        res.setHeader('Content-Type', 'video/MP2T');
-        res.setHeader('Content-Length', '1048576');
-        res.setHeader('Accept-Ranges', 'bytes');
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-
-        const mockSegment = Buffer.alloc(1048576, 0x47);
-        res.send(mockSegment);
-
-    } catch (error) {
-        console.error('Segment streaming error:', error);
-        res.status(500).json({ error: 'Failed to stream segment' });
-    }
-});
-
-// Download endpoint
-app.get('/api/download/:movieId', async (req, res) => {
-    try {
-        const { movieId } = req.params;
-        const quality = req.query.quality || '720p';
-
-        console.log(`â¬‡ï¸ Download request: movie ${movieId}, quality ${quality}`);
-
-        // Generate download URL
-        const downloadUrl = `${CDN_BASE_URL}/downloads/${movieId}_${quality}.mp4?expires=${Date.now() + 600000}`;
-
-        // Get movie title for filename
-        let filename = `Movie_${quality}.mp4`;
-        try {
-            const movieData = await fetchMovieData(movieId);
-            if (movieData?.title) {
-                filename = `${movieData.title.replace(/[^a-zA-Z0-9_.-]/g, '_')}_${quality}.mp4`;
-            }
-        } catch (e) {
-            console.error('Error getting movie title:', e);
+        if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+            return res.status(500).json({ 
+                error: 'TMDb API key not configured',
+                message: 'Please add your TMDb API key to environment variables'
+            });
         }
 
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.redirect(302, downloadUrl);
+        const fetch = (await import('node-fetch')).default;
+        const url = `${TMDB_BASE_URL}/movie/${id}?api_key=${TMDB_API_KEY}&language=en-US`;
+
+        console.log(`Fetching movie details for ID: ${id}`);
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`TMDb API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        res.json(data);
 
     } catch (error) {
-        console.error('Download error:', error);
-        res.status(500).json({ error: 'Download failed' });
-    }
-});
-
-// Video info endpoint
-app.get('/api/stream/:movieId/info', async (req, res) => {
-    try {
-        const { movieId } = req.params;
-
-        const videoInfo = {
-            movieId,
-            available: true,
-            qualities: ['480p', '720p', '1080p', '4K'],
-            duration: 7200,
-            formats: ['HLS', 'MP4'],
-            subtitles: ['en'],
-            audio_tracks: [{ language: 'en', codec: 'aac' }]
-        };
-
-        res.json(videoInfo);
-
-    } catch (error) {
-        console.error('Video info error:', error);
-        res.status(500).json({ error: 'Failed to get video info' });
-    }
-});
-
-// ==========================================
-// HELPER FUNCTIONS
-// ==========================================
-
-function generateHLSMasterPlaylist(movieId) {
-    const qualities = ['480p', '720p', '1080p', '4K'];
-
-    let playlist = `#EXTM3U\n#EXT-X-VERSION:6\n\n`;
-
-    qualities.forEach(quality => {
-        const bandwidth = getBandwidthForQuality(quality);
-        const resolution = getResolutionForQuality(quality);
-
-        playlist += `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${resolution}\n`;
-        playlist += `/api/stream/${movieId}/${quality}/index.m3u8\n\n`;
-    });
-
-    return playlist;
-}
-
-function generateQualityPlaylist(movieId, quality) {
-    const segmentCount = 720; // 2 hours @ 10s segments
-    const segmentDuration = 10;
-
-    let playlist = `#EXTM3U\n#EXT-X-VERSION:6\n#EXT-X-TARGETDURATION:${segmentDuration}\n#EXT-X-MEDIA-SEQUENCE:0\n\n`;
-
-    for (let i = 0; i < segmentCount; i++) {
-        playlist += `#EXTINF:${segmentDuration}.0,\n`;
-        playlist += `/api/stream/${movieId}/${quality}/segment${i.toString().padStart(6, '0')}.ts\n`;
-    }
-
-    playlist += '#EXT-X-ENDLIST\n';
-    return playlist;
-}
-
-function getBandwidthForQuality(quality) {
-    const bandwidths = {
-        '480p': 1500000,
-        '720p': 3000000,
-        '1080p': 6000000,
-        '4K': 15000000
-    };
-    return bandwidths[quality] || 3000000;
-}
-
-function getResolutionForQuality(quality) {
-    const resolutions = {
-        '480p': '854x480',
-        '720p': '1280x720',
-        '1080p': '1920x1080',
-        '4K': '3840x2160'
-    };
-    return resolutions[quality] || '1280x720';
-}
-
-async function fetchMovieData(movieId) {
-    try {
-        const response = await axios.get(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}`);
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching movie data:', error);
-        return null;
-    }
-}
-
-// ==========================================
-// TMDB API PROXY
-// ==========================================
-
-app.get('/api/*', async (req, res) => {
-    try {
-        const apiPath = req.path.replace('/api/', '');
-        const queryParams = { ...req.query, api_key: TMDB_API_KEY };
-        const queryString = new URLSearchParams(queryParams).toString();
-        const tmdbUrl = `${TMDB_BASE_URL}/${apiPath}?${queryString}`;
-
-        console.log(`ðŸ“¡ TMDb API: ${apiPath}`);
-
-        const response = await axios.get(tmdbUrl);
-
-        res.setHeader('Cache-Control', 'public, max-age=300');
-        res.json(response.data);
-
-    } catch (error) {
-        console.error('TMDb API Error:', error.message);
-        res.status(error.response?.status || 500).json({ 
-            error: error.response?.data || 'TMDb API request failed' 
+        console.error('Error fetching movie details:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch movie details',
+            message: error.message 
         });
     }
 });
 
-// Serve static files and SPA fallback
+app.get('/api/tmdb/movie/:id/credits', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+            return res.status(500).json({ 
+                error: 'TMDb API key not configured',
+                message: 'Please add your TMDb API key to environment variables'
+            });
+        }
+
+        const fetch = (await import('node-fetch')).default;
+        const url = `${TMDB_BASE_URL}/movie/${id}/credits?api_key=${TMDB_API_KEY}&language=en-US`;
+
+        console.log(`Fetching credits for movie ID: ${id}`);
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`TMDb API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        res.json(data);
+
+    } catch (error) {
+        console.error('Error fetching movie credits:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch movie credits',
+            message: error.message 
+        });
+    }
+});
+
+// Search movies endpoint (optional - for future use)
+app.get('/api/tmdb/search/movie', async (req, res) => {
+    try {
+        const { query, page = 1 } = req.query;
+
+        if (!query) {
+            return res.status(400).json({ error: 'Search query is required' });
+        }
+
+        if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+            return res.status(500).json({ 
+                error: 'TMDb API key not configured',
+                message: 'Please add your TMDb API key to environment variables'
+            });
+        }
+
+        const fetch = (await import('node-fetch')).default;
+        const url = `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=${page}`;
+
+        console.log(`Searching movies: ${query}`);
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`TMDb API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        res.json(data);
+
+    } catch (error) {
+        console.error('Error searching movies:', error);
+        res.status(500).json({ 
+            error: 'Failed to search movies',
+            message: error.message 
+        });
+    }
+});
+
+// Popular movies endpoint (optional - for future use)
+app.get('/api/tmdb/movie/popular', async (req, res) => {
+    try {
+        const { page = 1 } = req.query;
+
+        if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+            return res.status(500).json({ 
+                error: 'TMDb API key not configured',
+                message: 'Please add your TMDb API key to environment variables'
+            });
+        }
+
+        const fetch = (await import('node-fetch')).default;
+        const url = `${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&language=en-US&page=${page}`;
+
+        console.log('Fetching popular movies');
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`TMDb API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        res.json(data);
+
+    } catch (error) {
+        console.error('Error fetching popular movies:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch popular movies',
+            message: error.message 
+        });
+    }
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        tmdb_configured: TMDB_API_KEY && TMDB_API_KEY !== 'YOUR_TMDB_API_KEY_HERE'
+    });
+});
+
+// Serve static files (fallback for SPA routing)
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    // Don't serve index.html for API routes
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ error: 'API endpoint not found' });
+    }
+
+    // Serve the requested file or index.html for SPA routes
+    const filePath = path.join(__dirname, 'public', req.path);
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            res.sendFile(path.join(__dirname, 'public', 'index.html'));
+        }
+    });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+    res.status(500).json({ 
+        error: 'Internal server error',
+        message: err.message 
+    });
 });
 
 app.listen(PORT, () => {
-    console.log(`ðŸš€ FilmyFeed server running on port ${PORT}`);
-    console.log(`ðŸŽ¬ Streaming: http://localhost:${PORT}/api/stream`);
-    console.log(`ðŸ“± Web App: http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`TMDb API configured: ${TMDB_API_KEY && TMDB_API_KEY !== 'YOUR_TMDB_API_KEY_HERE'}`);
 });
 
 module.exports = app;
