@@ -1,0 +1,108 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <title>Movie - FilmyFeed</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="movie.css">
+</head>
+<body class="movie-page">
+  <header class="app-header movie-header">
+    <div class="header-container">
+      <div class="header-left">
+        <button class="back-btn" id="back-btn" aria-label="Back">⟵</button>
+        <span class="brand-text">FILMYFEED</span>
+      </div>
+      <div class="header-right">
+        <button class="search-btn" id="search-btn" aria-label="Search">🔍</button>
+        <button class="share-btn" id="share-btn" aria-label="Share">⤴</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="movie-content" class="main-content movie-details hidden">
+    <section class="movie-hero">
+      <div id="movie-backdrop" class="hero-backdrop"></div>
+      <div class="hero-gradient"></div>
+
+      <div class="hero-info-overlay">
+        <img id="movie-poster" class="movie-poster" alt="Poster">
+        <div class="movie-basic-info">
+          <h1 id="movie-title" class="movie-title">Loading...</h1>
+          <div id="movie-meta" class="movie-meta">Year • Language • ★ Rating</div>
+          <div id="movie-genres" class="movie-genres"></div>
+        </div>
+      </div>
+
+      <div class="play-button-overlay">
+        <button class="hero-play-btn" id="hero-play-btn" aria-label="Play">▶</button>
+      </div>
+    </section>
+
+    <section class="action-section">
+      <div class="action-buttons">
+        <button class="btn-primary" id="play-btn">▶ Play</button>
+        <button class="btn-secondary" id="trailer-btn">👁 Watch Trailer</button>
+        <button class="btn-icon" id="download-btn" aria-label="Download">⬇</button>
+        <button class="btn-icon" id="add-list-btn" aria-label="Add to List">＋</button>
+      </div>
+    </section>
+
+    <section class="details-section">
+      <div class="detail-item">
+        <h3 class="detail-title">About</h3>
+        <p id="movie-overview" class="detail-text">Loading overview…</p>
+      </div>
+
+      <div class="detail-item">
+        <h3 class="detail-title">Cast & crew</h3>
+        <div class="cast-info">
+          <div class="info-row"><span class="info-label">Director</span><span id="movie-director" class="info-value">–</span></div>
+          <div class="info-row"><span class="info-label">Cast</span><span id="movie-cast" class="info-value">–</span></div>
+        </div>
+      </div>
+
+      <div class="detail-item">
+        <h3 class="detail-title">Details</h3>
+        <div class="movie-info-grid">
+          <div class="info-row"><span class="info-label">Release</span><span id="movie-release" class="info-value">–</span></div>
+          <div class="info-row"><span class="info-label">Runtime</span><span id="movie-runtime" class="info-value">–</span></div>
+          <div class="info-row"><span class="info-label">Language</span><span id="movie-language" class="info-value">–</span></div>
+          <div class="info-row"><span class="info-label">Rating</span><span id="movie-rating" class="info-value">–</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="related-section">
+      <h3 class="section-title">More like this</h3>
+      <div id="related-movies" class="related-movies"></div>
+    </section>
+  </main>
+
+  <div id="movie-loading" class="movie-loading">
+    <div class="loading-spinner"></div>
+    <span>Loading movie…</span>
+  </div>
+
+  <div id="movie-error" class="status-message error hidden">
+    <span>Failed to load. Tap to retry.</span>
+  </div>
+
+  <div id="trailer-modal" class="trailer-modal hidden">
+    <div class="trailer-container">
+      <div class="trailer-header">
+        <h3 id="trailer-title" class="trailer-title">Trailer</h3>
+        <button id="trailer-close" class="trailer-close">✕</button>
+      </div>
+      <div class="trailer-frame-wrapper">
+        <iframe id="trailer-iframe" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="movie.js"></script>
+</body>
+</html>
