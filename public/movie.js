@@ -67,8 +67,18 @@ class MovieDetailsApp {
 
             if (this.localId) {
                 console.log('Loading local movie with localId:', this.localId);
-                this.isLocalMovie = true;
-                await this.loadLocalMovieDetails();
+                // Try to find in local movies.json
+                const localMovie = this.localMovies.find(m => String(m.id) === String(this.localId));
+                if (localMovie) {
+                    console.log('Local movie found, loading details...');
+                    this.isLocalMovie = true;
+                    await this.loadLocalMovieDetails();
+                } else {
+                    console.warn('Local movie not found in JSON, fetching TMDb movie with id:', this.localId);
+                    this.isLocalMovie = false;
+                    this.movieId = this.localId;
+                    await this.loadTMDbMovieDetails();
+                }
             } else if (this.movieId) {
                 console.log('Loading TMDb movie with id:', this.movieId);
                 this.isLocalMovie = false;
@@ -91,14 +101,12 @@ class MovieDetailsApp {
                 this.goBack();
             });
         }
-
         if (this.elements.searchBtn) {
             this.elements.searchBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 window.location.href = '/index.html';
             });
         }
-
         if (this.elements.shareBtn) {
             this.elements.shareBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -113,21 +121,12 @@ class MovieDetailsApp {
                 this.playMovie();
             });
         }
-
-        if (this.elements.heroPlayBtn) {
-            this.elements.heroPlayBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.playMovie();
-            });
-        }
-
         if (this.elements.downloadBtn) {
             this.elements.downloadBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.downloadMovie();
             });
         }
-
         if (this.elements.trailerBtn) {
             this.elements.trailerBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -160,30 +159,21 @@ class MovieDetailsApp {
 
     async loadLocalMovieDetails() {
         this.showLoading();
-
         try {
             console.log('Finding local movie with localId:', this.localId);
-
-            // Find the local movie by ID
             const movie = this.localMovies.find(m => 
                 String(m.id) === String(this.localId)
             );
-
             if (!movie) {
                 throw new Error(`Local movie not found with id: ${this.localId}`);
             }
-
             console.log('Found local movie:', movie);
-
             // ALWAYS enrich with TMDb data for images and metadata
             this.movieData = await this.enrichWithTMDb(movie);
-
             console.log('Enriched movie data:', this.movieData);
-
             this.renderMovieDetails();
             this.updatePageTitle();
             this.showContent();
-
         } catch (error) {
             console.error('Error loading local movie:', error);
             this.showError(`Failed to load movie details: ${error.message}`);
@@ -192,20 +182,16 @@ class MovieDetailsApp {
 
     async loadTMDbMovieDetails() {
         this.showLoading();
-
         try {
             const [movieResponse, creditsResponse] = await Promise.all([
                 this.fetchFromAPI(`movie/${this.movieId}`),
                 this.fetchFromAPI(`movie/${this.movieId}/credits`)
             ]);
-
             this.movieData = movieResponse;
             this.creditsData = creditsResponse;
-
             this.renderMovieDetails();
             this.updatePageTitle();
             this.showContent();
-
         } catch (error) {
             console.error('Error loading TMDb movie:', error);
             this.showError('Failed to load movie details from TMDb.');
@@ -217,27 +203,20 @@ class MovieDetailsApp {
             console.log('No valid TMDb ID found, using basic local data only');
             return localMovie;
         }
-
         try {
             console.log('Enriching with TMDb data for movie ID:', localMovie.id);
-
             const [details, credits] = await Promise.all([
                 this.fetchFromAPI(`movie/${localMovie.id}`),
                 this.fetchFromAPI(`movie/${localMovie.id}/credits`)
             ]);
-
             console.log('TMDb details received:', details);
             console.log('TMDb credits received:', credits);
-
             // Merge TMDb data with local data, keeping local watch/download links
             const enrichedMovie = {
-                // Keep original local data
                 movie: localMovie.movie,
                 id: localMovie.id,
                 watch: localMovie.watch,
                 download: localMovie.download,
-
-                // Add TMDb data
                 title: details.title || localMovie.movie,
                 year: details.release_date ? new Date(details.release_date).getFullYear() : null,
                 language: details.original_language?.toUpperCase(),
@@ -252,15 +231,12 @@ class MovieDetailsApp {
                 release_date: details.release_date,
                 vote_average: details.vote_average,
                 spoken_languages: details.spoken_languages,
-
                 // Store full TMDb data for reference
                 _tmdbDetails: details,
                 _tmdbCredits: credits
             };
-
             console.log('Movie enriched with TMDb data:', enrichedMovie);
             return enrichedMovie;
-
         } catch (error) {
             console.error('TMDb enrichment failed for', localMovie.movie, error);
             // Return original local movie data if enrichment fails
@@ -276,80 +252,56 @@ class MovieDetailsApp {
             console.error('No movie data to render');
             return;
         }
-
         console.log('Rendering movie details for:', this.movieData.title || this.movieData.movie);
-
         // Hero backdrop from TMDb
-        const backdropUrl = this.movieData.backdrop || 
-                           (this.movieData.backdrop_path ? `${this.BACKDROP_BASE}${this.movieData.backdrop_path}` : null);
-
+        const backdropUrl = this.movieData.backdrop || (this.movieData.backdrop_path ? `${this.BACKDROP_BASE}${this.movieData.backdrop_path}` : null);
         if (backdropUrl && this.elements.movieBackdrop) {
             this.elements.movieBackdrop.style.backgroundImage = `url(${backdropUrl})`;
             console.log('Set backdrop:', backdropUrl);
         }
-
         // Movie poster from TMDb
-        const posterUrl = this.movieData.poster ||
-                         (this.movieData.poster_path ? `${this.IMG_BASE}${this.movieData.poster_path}` : null);
-
+        const posterUrl = this.movieData.poster || (this.movieData.poster_path ? `${this.IMG_BASE}${this.movieData.poster_path}` : null);
         if (posterUrl && this.elements.moviePoster) {
             this.elements.moviePoster.src = posterUrl;
             this.elements.moviePoster.alt = `${this.movieData.title || this.movieData.movie} poster`;
             console.log('Set poster:', posterUrl);
         }
-
         // Movie title
         if (this.elements.movieTitle) {
             this.elements.movieTitle.textContent = this.movieData.title || this.movieData.movie || 'Untitled';
         }
-
         // Meta information (year, language, rating)
         this.renderMovieMeta();
-
         // Genres from TMDb
         this.renderGenres();
-
         // Overview from TMDb
         if (this.elements.movieOverview) {
             this.elements.movieOverview.textContent = this.movieData.overview || 'No overview available.';
         }
-
         // Movie details from TMDb
         this.renderMovieInfo();
-
         // Cast & Crew from TMDb
         this.renderCastCrew();
-
         console.log('Movie details rendered successfully');
     }
 
     renderMovieMeta() {
         if (!this.elements.movieMeta) return;
-
-        const year = this.movieData.year || 
-                    (this.movieData.release_date ? new Date(this.movieData.release_date).getFullYear() : '');
-
-        const rating = this.movieData.rating || 
-                      (typeof this.movieData.vote_average === 'number' ? this.movieData.vote_average.toFixed(1) : 'N/A');
-
+        const year = this.movieData.year || (this.movieData.release_date ? new Date(this.movieData.release_date).getFullYear() : '');
+        const rating = this.movieData.rating || (typeof this.movieData.vote_average === 'number' ? this.movieData.vote_average.toFixed(1) : 'N/A');
         const language = (this.movieData.language || this.movieData.original_language || '').toUpperCase();
-
         const metaParts = [];
         if (year) metaParts.push(year);
         if (language) metaParts.push(language);
-        metaParts.push(`â˜… ${rating}`);
-
-        this.elements.movieMeta.textContent = metaParts.join(' â€¢ ');
+        metaParts.push(`★ ${rating}`);
+        this.elements.movieMeta.textContent = metaParts.join(' • ');
     }
 
     renderGenres() {
         if (!this.elements.movieGenres) return;
-
-        let genres = this.movieData.genres || [];
-
+        const genres = this.movieData.genres || [];
         if (genres.length > 0) {
-            const genresHTML = genres
-                .slice(0, 3)
+            const genresHTML = genres.slice(0, 3)
                 .map(genre => `<span class="genre">${this.escapeHtml(genre)}</span>`)
                 .join('');
             this.elements.movieGenres.innerHTML = genresHTML;
@@ -359,30 +311,22 @@ class MovieDetailsApp {
     renderMovieInfo() {
         // Release date
         if (this.elements.movieRelease) {
-            const releaseDate = this.movieData.release_date ? 
-                this.formatDate(this.movieData.release_date) : 
-                (this.movieData.year || 'Not available');
+            const releaseDate = this.movieData.release_date ? this.formatDate(this.movieData.release_date) : (this.movieData.year || 'Not available');
             this.elements.movieRelease.textContent = releaseDate;
         }
-
         // Runtime
         if (this.elements.movieRuntime) {
             this.elements.movieRuntime.textContent = this.formatRuntime(this.movieData.runtime) || 'Not available';
         }
-
         // Language
         if (this.elements.movieLanguage) {
-            const language = this.movieData.spoken_languages?.[0]?.english_name || 
-                           (this.movieData.language || this.movieData.original_language || 'Unknown').toUpperCase();
-            this.elements.movieLanguage.textContent = language;
+            const language = this.movieData.spoken_languages?.[0]?.english_name || this.movieData.original_language || 'Unknown';
+            this.elements.movieLanguage.textContent = language.toUpperCase();
         }
-
         // Rating
         if (this.elements.movieRating) {
-            const rating = this.movieData.rating ? 
-                `${this.movieData.rating}/10` : 
-                (typeof this.movieData.vote_average === 'number' ? 
-                    `${this.movieData.vote_average.toFixed(1)}/10` : 'N/A');
+            const rating = this.movieData.rating ? `${this.movieData.rating}/10` :
+                (typeof this.movieData.vote_average === 'number' ? `${this.movieData.vote_average.toFixed(1)}/10` : 'N/A');
             this.elements.movieRating.textContent = rating;
         }
     }
@@ -390,19 +334,13 @@ class MovieDetailsApp {
     renderCastCrew() {
         // Director
         if (this.elements.movieDirector) {
-            const director = this.movieData.director || 
-                           (this.creditsData?.crew?.find(person => person.job === 'Director')?.name) || 
-                           'Not available';
+            const director = this.movieData.director || (this.creditsData?.crew?.find(person => person.job === 'Director')?.name) || 'Not available';
             this.elements.movieDirector.textContent = director;
         }
-
         // Cast
         if (this.elements.movieCast) {
-            const cast = this.movieData.cast || 
-                        (this.creditsData?.cast?.slice(0, 5).map(person => person.name)) || 
-                        [];
-
-            const castText = Array.isArray(cast) ? cast.join(', ') : (cast || 'Not available');
+            const cast = this.movieData.cast || this.creditsData?.cast?.slice(0, 5).map(person => person.name) || [];
+            const castText = Array.isArray(cast) ? cast.join(', ') : cast;
             this.elements.movieCast.textContent = castText;
         }
     }
@@ -412,7 +350,7 @@ class MovieDetailsApp {
         if (this.isLocalMovie && this.movieData?.watch) {
             console.log('Playing movie from local watch link:', this.movieData.watch);
             // For local movies, use the watch link from movies.json
-            if (this.movieData.watch.includes('.mp4') || this.movieData.watch.includes('http')) {
+            if (this.movieData.watch.includes('.mp4') || this.movieData.watch.startsWith('http')) {
                 window.location.href = `watch.html?url=${encodeURIComponent(this.movieData.watch)}&title=${encodeURIComponent(this.movieData.title || this.movieData.movie)}`;
             } else {
                 window.open(this.movieData.watch, '_blank');
@@ -505,26 +443,16 @@ class MovieDetailsApp {
         try {
             const url = new URL(`${this.API_BASE}/${endpoint}`);
             Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
-
             console.log('Fetching from API:', url.toString());
             const response = await fetch(url);
-
             if (!response.ok) {
                 throw new Error(`API request failed: ${response.status} ${response.statusText}`);
             }
-
             return await response.json();
         } catch (error) {
             console.error('API fetch error:', error);
             throw error;
         }
-    }
-
-    // Utility methods
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
     }
 
     formatDate(dateString) {
@@ -533,4 +461,16 @@ class MovieDetailsApp {
             return new Date(dateString).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
-                
+                day: 'numeric'
+            });
+        } catch (error) {
+            console.error('Date formatting error:', error);
+            return dateString;
+        }
+    }
+
+    formatRuntime(minutes) {
+        if (!minutes) return 'Not available';
+        const hrs = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return `${hrs}h 
