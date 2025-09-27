@@ -1,74 +1,73 @@
-class MovieDetailsApp {
-    constructor() {
-        this.apiBase = '/api';
-        this.localId = new URLSearchParams(window.location.search).get('localId');
-        this.movieId = new URLSearchParams(window.location.search).get('id');
+class MovieDetails {
+  constructor() {
+    this.apiBase = "/api";
+    this.imgBase = "https://image.tmdb.org/t/p/w500";
+    this.backdropBase = "https://image.tmdb.org/t/p/w1280";
 
-        this.elements = {
-            title: document.getElementById('movie-title'),
-            overview: document.getElementById('movie-overview'),
-            poster: document.getElementById('movie-poster'),
-            backdrop: document.getElementById('movie-backdrop'),
-            player: document.getElementById('movie-player')
-        };
+    this.movieId = this.getLocalId();
+    this.movieData = null;
+    this.creditsData = null;
 
-        this.init();
+    this.init();
+  }
+
+  getLocalId() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("localId");
+  }
+
+  async init() {
+    if (!this.movieId) {
+      console.error("No movieId provided");
+      return;
     }
 
-    async init() {
-        if (this.localId) {
-            await this.loadFromLocal(this.localId);
-        } else if (this.movieId) {
-            await this.loadFromTMDb(this.movieId);
-        } else {
-            this.elements.title.textContent = 'Movie not found';
-        }
+    try {
+      // 1. Try local movies.json
+      const localRes = await fetch("/movies.json");
+      const localMovies = await localRes.json();
+      const localMovie = localMovies.find((m) => m.localId === this.movieId);
+
+      if (localMovie) {
+        console.log("Loaded from movies.json:", localMovie);
+        this.renderMovie(localMovie);
+      } else {
+        // 2. Fallback → TMDb API
+        console.log("Fetching from TMDb:", this.movieId);
+        const tmdbRes = await fetch(`${this.apiBase}/tmdb?id=${this.movieId}`);
+        if (!tmdbRes.ok) throw new Error("TMDb fetch failed");
+
+        const tmdbData = await tmdbRes.json();
+        console.log("TMDb response:", tmdbData);
+        this.renderMovie(tmdbData);
+      }
+    } catch (err) {
+      console.error("Error loading movie:", err);
+      document.body.innerHTML = `<p style="color:red">Failed to load movie: ${err.message}</p>`;
+    }
+  }
+
+  renderMovie(data) {
+    const container = document.getElementById("movie-container");
+    if (!container) return;
+
+    // Extract trailer (YouTube)
+    let trailer = "";
+    if (data.videos && data.videos.results.length > 0) {
+      const yt = data.videos.results.find((v) => v.site === "YouTube" && v.type === "Trailer");
+      if (yt) {
+        trailer = `<iframe width="100%" height="315" src="https://www.youtube.com/embed/${yt.key}" frameborder="0" allowfullscreen></iframe>`;
+      }
     }
 
-    async loadFromLocal(localId) {
-        try {
-            const res = await fetch('/movies.json');
-            const movies = await res.json();
-            const movie = movies.find(m => m.id.toString() === localId);
-            if (movie) {
-                this.renderMovie(movie);
-            } else {
-                // fallback to TMDb if not in local
-                await this.loadFromTMDb(localId);
-            }
-        } catch (err) {
-            console.error('Local fetch failed, trying TMDb…', err);
-            await this.loadFromTMDb(localId);
-        }
-    }
-
-    async loadFromTMDb(id) {
-        try {
-            const res = await fetch(`${this.apiBase}/tmdb?id=${id}`);
-            const movie = await res.json();
-            this.renderMovie(movie);
-        } catch (err) {
-            console.error('TMDb fetch failed', err);
-            this.elements.title.textContent = 'Error loading movie';
-        }
-    }
-
-    renderMovie(movie) {
-        this.elements.title.textContent = movie.title || 'Untitled';
-        this.elements.overview.textContent = movie.overview || '';
-        if (movie.poster) this.elements.poster.src = movie.poster;
-        if (movie.backdrop) this.elements.backdrop.src = movie.backdrop;
-
-        // trailer / player placeholder
-        if (movie.streamUrl) {
-            this.elements.player.innerHTML = `
-                <video controls autoplay src="${movie.streamUrl}"></video>
-            `;
-        } else {
-            this.elements.player.textContent = 'No stream available';
-        }
-    }
+    container.innerHTML = `
+      <h1>${data.title || data.name}</h1>
+      <img src="${this.imgBase}${data.poster_path}" alt="${data.title}" style="max-width:200px;border-radius:10px;" />
+      <p><b>Overview:</b> ${data.overview || "No overview available"}</p>
+      <p><b>Release Date:</b> ${data.release_date || "N/A"}</p>
+      ${trailer}
+    `;
+  }
 }
 
-// ✅ Instantiate class
-document.addEventListener('DOMContentLoaded', () => new MovieDetailsApp());
+document.addEventListener("DOMContentLoaded", () => new MovieDetails());
